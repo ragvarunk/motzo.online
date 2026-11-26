@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMotzo } from "@/lib/store";
 import { LANGUAGES, languageByCode } from "@/lib/languages";
 import { cls, fullStamp, nowIso, uid } from "@/lib/util";
+import { useAuth } from "@/lib/auth";
+import { SignOutDialog } from "./Account";
 import { EagleAvatar } from "./Eagle";
-import { Icon, PanelHeader, useUi } from "./ui";
+import { Icon, PanelHeader, Portal, useUi } from "./ui";
 
 /** First letter(s) of the owner's name for the round badge. */
 export function initials(name: string) {
@@ -34,6 +36,8 @@ export function OwnerBadge({ size = 32 }: { size?: number }) {
  */
 export function ProfileButton({ onNavigate }: { onNavigate?: () => void }) {
   const { state } = useMotzo();
+  const auth = useAuth();
+  const signedIn = auth.status === "signed_in";
   const ui = useUi();
   const [open, setOpen] = useState(false);
   const [confirmOut, setConfirmOut] = useState(false);
@@ -64,8 +68,15 @@ export function ProfileButton({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div ref={ref} className="relative">
       {open && (
-        <div className="pop-in absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-2xl border border-line bg-surface py-1.5 text-sm shadow-xl" role="menu">
-          <div className="truncate px-4 pb-2 pt-1.5 text-xs text-ink-3">{state.owner.email || name || "Your profile"}</div>
+        <div className="pop-in absolute bottom-full left-0 right-0 z-50 mb-2 overflow-hidden rounded-2xl border border-line glass-strong py-1.5 text-sm shadow-xl" role="menu">
+          <div className="truncate px-4 pb-2 pt-1.5 text-xs text-ink-3">{auth.user?.email || state.owner.email || name || "Your profile"}</div>
+          {auth.status !== "off" && (
+            <MenuItem
+              icon={signedIn ? "shield" : "lock"}
+              label={signedIn ? "Account" : "Sign in to save across devices"}
+              onClick={go(() => ui.open({ type: "account" }))}
+            />
+          )}
           <MenuItem icon="user" label="Profile" onClick={go(() => ui.open({ type: "profile" }))} />
           <MenuItem icon="settings" label="Settings" onClick={go(() => ui.open({ type: "settings" }))} />
           <MenuItem icon="globe" label="Language" detail={lang.native} onClick={go(() => ui.open({ type: "language" }))} />
@@ -76,7 +87,7 @@ export function ProfileButton({ onNavigate }: { onNavigate?: () => void }) {
           <div className="my-1.5 h-px bg-line" />
           <MenuItem
             icon="logout"
-            label="Log out"
+            label={signedIn ? "Sign out" : "Log out"}
             onClick={() => {
               setOpen(false);
               setConfirmOut(true);
@@ -93,11 +104,11 @@ export function ProfileButton({ onNavigate }: { onNavigate?: () => void }) {
         <OwnerBadge size={34} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">{name || "Add your name"}</span>
-          <span className="block truncate text-xs text-ink-3">Free · on this device</span>
+          <span className="block truncate text-xs text-ink-3">{signedIn ? auth.user?.email : "Free · on this device"}</span>
         </span>
         <Icon name="back" className="h-4 w-4 rotate-90 text-ink-3" />
       </button>
-      {confirmOut && <LogOutDialog onCancel={() => setConfirmOut(false)} />}
+      {confirmOut && (signedIn ? <SignOutDialog onCancel={() => setConfirmOut(false)} /> : <LogOutDialog onCancel={() => setConfirmOut(false)} />)}
     </div>
   );
 }
@@ -114,31 +125,48 @@ function MenuItem({ icon, label, detail, onClick }: { icon: string; label: strin
 
 function LogOutDialog({ onCancel }: { onCancel: () => void }) {
   const { resetAll } = useMotzo();
+  const auth = useAuth();
+  const ui = useUi();
   const [busy, setBusy] = useState(false);
   return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/40 p-4" onClick={onCancel}>
-      <div onClick={(e) => e.stopPropagation()} className="pop-in w-full max-w-sm rounded-3xl bg-surface p-5 shadow-2xl" role="alertdialog" aria-labelledby="lo-t">
-        <h2 id="lo-t" className="text-lg font-bold">Log out of Motzo?</h2>
-        <p className="mt-2 text-sm text-ink-2">
-          There are no accounts yet, so logging out clears your vehicles, chats and details from this device. Once sign-in arrives, logging out will keep everything saved in your account.
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button className="btn btn-ghost" onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            className="btn bg-bad text-white"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              await resetAll();
-            }}
-          >
-            {busy ? "Logging out…" : "Log out"}
-          </button>
+    <Portal>
+      <div className="fixed inset-0 z-[80] grid place-items-center bg-black/40 p-4" onClick={onCancel}>
+        <div onClick={(e) => e.stopPropagation()} className="pop-in w-full max-w-sm rounded-3xl glass-strong p-5 shadow-2xl" role="alertdialog" aria-labelledby="lo-t">
+          <h2 id="lo-t" className="text-lg font-bold">Log out of Motzo?</h2>
+          <p className="mt-2 text-sm text-ink-2">
+            {auth.status === "off"
+              ? "Accounts aren't switched on for this site yet, so logging out deletes your vehicles, chats and details from this device for good."
+              : "You aren't signed in, so logging out deletes your vehicles, chats and details from this device for good. Sign in first and they're saved to your account instead."}
+          </p>
+          {auth.status === "signed_out" && (
+            <button
+              className="btn btn-soft mt-4 w-full"
+              onClick={() => {
+                onCancel();
+                ui.open({ type: "account" });
+              }}
+            >
+              Sign in and keep everything
+            </button>
+          )}
+          <div className="mt-5 flex justify-end gap-2">
+            <button className="btn btn-ghost" onClick={onCancel}>
+              Cancel
+            </button>
+            <button
+              className="btn bg-bad text-white"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                await resetAll();
+              }}
+            >
+              {busy ? "Logging out…" : "Log out"}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }
 

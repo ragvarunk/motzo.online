@@ -1,7 +1,7 @@
 "use client";
 
 import { useMotzo } from "@/lib/store";
-import type { CardData, InsurancePolicy, Message } from "@/lib/types";
+import type { CardData, InsurancePolicy, Message, VehicleIssue } from "@/lib/types";
 import { cls, money, nowIso, SHOP_TYPE_LABEL, uid } from "@/lib/util";
 import { Icon, useUi } from "./ui";
 
@@ -34,6 +34,9 @@ function Card({ card, index, message }: { card: CardData; index: number; message
     }));
 
   switch (card.kind) {
+    case "photo_report":
+      return <PhotoReportCard card={card} message={message} onSaved={(id) => markCard({ savedIssueId: id })} />;
+
     case "estimate": {
       const e = card.estimate;
       const u = URGENCY[e.urgency] ?? URGENCY.safe_to_drive;
@@ -285,6 +288,186 @@ function Fact({ icon, text, tone, wide }: { icon: string; text: string; tone?: s
     <div className={cls("flex items-center gap-1.5 rounded-xl bg-surface-2 px-2.5 py-2", wide && "col-span-2", tone)}>
       <Icon name={icon} className="h-4 w-4 shrink-0" />
       <span className="font-medium">{text}</span>
+    </div>
+  );
+}
+
+const SAFETY: Record<string, { title: string; box: string; dot: string }> = {
+  safe_to_drive: { title: "Safe to drive", box: "bg-good/10 text-good", dot: "bg-good" },
+  drive_carefully: { title: "Drive carefully", box: "bg-warn/12 text-warn", dot: "bg-warn" },
+  do_not_drive: { title: "Don't drive it", box: "bg-bad/10 text-bad", dot: "bg-bad" },
+};
+const SEVERITY: Record<string, string> = { minor: "Minor", moderate: "Moderate", serious: "Serious" };
+const CONFIDENCE: Record<string, string> = { high: "Clear from the photo", medium: "Likely, a shop should confirm", low: "Hard to tell from this photo" };
+
+/** Everything Motzo worked out from one photo, in one card: what it sees, what it means, what to do. */
+function PhotoReportCard({
+  card,
+  message,
+  onSaved,
+}: {
+  card: Extract<CardData, { kind: "photo_report" }>;
+  message: Message;
+  onSaved: (id: string) => void;
+}) {
+  const ui = useUi();
+  const { state, update, activeVehicle } = useMotzo();
+  const r = card.report;
+  const e = card.estimate;
+  const safety = SAFETY[r.urgency] ?? SAFETY.drive_carefully;
+  const shopType = e?.shopType ?? card.search?.shopType ?? "other";
+  const job = e?.work || card.search?.searchText || r.title;
+  const saved = card.savedIssueId ? state.issues.find((i) => i.id === card.savedIssueId) : undefined;
+
+  const save = () => {
+    if (!activeVehicle) return;
+    const issue: VehicleIssue = {
+      id: uid("iss_"),
+      vehicleId: message.vehicleId || activeVehicle.id,
+      at: message.at || nowIso(),
+      title: r.title,
+      summary: r.problem,
+      urgency: r.urgency,
+      costLow: e?.costLow ?? null,
+      costHigh: e?.costHigh ?? null,
+      shopType: e?.shopType ?? card.search?.shopType ?? null,
+      photoId: r.photoId,
+      thumb: r.thumb,
+      chatId: message.chatId,
+      status: "open",
+    };
+    update((s) => ({ ...s, issues: [...(s.issues ?? []), issue] }));
+    onSaved(issue.id);
+    ui.toast(`Saved to ${activeVehicle.model || "your vehicle"}'s record`);
+  };
+
+  return (
+    <div className="card rise overflow-hidden">
+      <div className="flex gap-3 p-4 pb-3">
+        {r.thumb && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={r.thumb} alt="Your photo" className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-line sm:h-20 sm:w-20" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">What I see</p>
+          <p className="text-[1.05rem] font-bold leading-snug">{r.title}</p>
+          <p className="mt-0.5 text-sm text-ink-2">{r.seen}</p>
+        </div>
+      </div>
+
+      <div className={cls("mx-4 flex items-start gap-2.5 rounded-2xl px-3 py-2.5", safety.box)}>
+        <span className={cls("mt-1.5 h-2 w-2 shrink-0 rounded-full", safety.dot)} />
+        <div className="min-w-0 text-sm">
+          <p className="font-bold">
+            {safety.title}
+            {r.fixBy && <span className="font-semibold opacity-80"> · fix {r.fixBy.charAt(0).toLowerCase() + r.fixBy.slice(1)}</span>}
+          </p>
+          {r.safetyReason && <p className="text-ink-2">{r.safetyReason}</p>}
+        </div>
+      </div>
+
+      <div className="p-4 pt-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">What it likely means</p>
+        <p className="mt-0.5 text-sm">{r.problem}</p>
+        <p className="mt-1 text-xs text-ink-3">
+          {SEVERITY[r.severity] ?? ""}{r.severity ? " · " : ""}{CONFIDENCE[r.confidence] ?? ""}
+        </p>
+
+        {(e || r.findings.length > 0) && (
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+            {e && (
+              <div className="col-span-2 rounded-xl bg-surface-2 px-3 py-2 sm:col-span-1">
+                <p className="text-xs text-ink-3">Likely cost</p>
+                <p className="text-lg font-bold leading-tight">
+                  {money(e.costLow)}–{money(e.costHigh)}
+                </p>
+                <p className="text-xs text-ink-2">{e.work}</p>
+              </div>
+            )}
+            {e && (
+              <div className="rounded-xl bg-surface-2 px-3 py-2">
+                <p className="text-xs text-ink-3">Who fixes it</p>
+                <p className="font-semibold">{SHOP_TYPE_LABEL[e.shopType] ?? "Auto shop"}</p>
+                <p className="text-xs text-ink-2">{TODAY[e.today] ?? e.today}</p>
+              </div>
+            )}
+            {r.findings.slice(0, 4).map((f, i) => (
+              <div key={i} className="rounded-xl bg-surface-2 px-3 py-2">
+                <p className="text-xs text-ink-3">{f.label}</p>
+                <p className="font-semibold">{f.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {e?.insuranceNote && (
+          <p className="mt-3 flex gap-2 rounded-xl bg-accent-soft px-3 py-2.5 text-sm text-ink-2">
+            <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+            <span>
+              <span className="font-semibold text-ink">Insurance: </span>
+              {e.insuranceNote}
+            </span>
+          </p>
+        )}
+
+        {r.doNow.length > 0 && (
+          <div className="mt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">Until it&apos;s fixed</p>
+            <ul className="mt-1 space-y-1 text-sm">
+              {r.doNow.slice(0, 3).map((d, i) => (
+                <li key={i} className="flex gap-2">
+                  <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-good" />
+                  <span>{d}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {card.photos && card.photos.length > 0 && (
+          <div className="mt-3 rounded-xl border border-line p-3">
+            <p className="text-sm font-semibold">Shops will also want</p>
+            <ul className="mt-1 space-y-1 text-sm text-ink-2">
+              {card.photos.slice(0, 3).map((p, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent-soft text-xs font-bold text-accent">{i + 1}</span>
+                  <span>
+                    <span className="font-medium text-ink">{p.label}</span>
+                    {p.why && <span>: {p.why}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <button className="btn btn-soft mt-2 w-full sm:w-auto" onClick={() => ui.openCamera({ mode: "photo" })}>
+              <Icon name="camera" className="h-4 w-4" /> Add photos
+            </button>
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {card.offerQuotes !== false && (
+            <button className="btn btn-primary flex-1 sm:flex-none" onClick={() => ui.open({ type: "newQuote", shopType, job })}>
+              <Icon name="quote" className="h-4 w-4" /> Get quotes
+            </button>
+          )}
+          <button className="btn btn-ghost flex-1 sm:flex-none" onClick={() => ui.open({ type: "shops", shopType, searchText: card.search?.searchText ?? job })}>
+            <Icon name="map" className="h-4 w-4" /> <span className="whitespace-nowrap">Nearby shops</span>
+          </button>
+          {saved ? (
+            <button className="btn btn-ghost w-full text-good sm:w-auto" onClick={() => ui.open({ type: "garage", tab: "history" })}>
+              <Icon name="check" className="h-4 w-4" /> Saved to record
+            </button>
+          ) : (
+            <button className="btn btn-ghost w-full sm:w-auto" onClick={save} disabled={!activeVehicle}>
+              <Icon name="garage" className="h-4 w-4" /> Save to car record
+            </button>
+          )}
+        </div>
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-ink-3">
+          <Icon name="lock" className="mt-px h-3.5 w-3.5 shrink-0" />
+          {e?.basis ? `${e.basis} ` : ""}Shops never see your details until you accept a quote.
+        </p>
+      </div>
     </div>
   );
 }

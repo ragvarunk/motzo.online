@@ -8,7 +8,7 @@ import { cls, dayLabel, fullStamp, timeOnly, timeZoneName } from "@/lib/util";
 import { MessageCards } from "./Cards";
 import { useEngine } from "./ChatEngine";
 import { RobotFace, useRobot } from "./Robot";
-import { Icon } from "./ui";
+import { Icon, Portal } from "./ui";
 
 const REACTIONS = ["👍", "❤️", "😊", "😮", "🙏", "👎"];
 
@@ -99,7 +99,7 @@ function EmptyChat() {
       </p>
       <div className="mt-6 grid w-full max-w-xl gap-2 sm:grid-cols-2">
         {ideas.map(([icon, t]) => (
-          <button key={t} className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface px-3.5 py-3 text-left text-sm hover:border-ink-3/60" onClick={() => send({ text: t })}>
+          <button key={t} className="flex items-center gap-2.5 glass rounded-2xl px-3.5 py-3 text-left text-sm hover:border-ink-3/60" onClick={() => send({ text: t })}>
             <Icon name={icon} className="h-4 w-4 shrink-0 text-ink-3" />
             {t}
           </button>
@@ -140,11 +140,16 @@ function Bubble({ message: m }: { message: Message }) {
   return (
     <div className={cls("group my-1.5 flex gap-2", mine ? "justify-end" : "justify-start")}>
       {!mine && (
-        <div className="mt-auto hidden shrink-0 sm:block">
+        <div className="mt-0.5 hidden shrink-0 sm:block">
           <RobotFace mood="idle" size={30} />
         </div>
       )}
-      <div className={cls("relative flex max-w-[88%] flex-col sm:max-w-[78%]", mine ? "items-end" : "items-start")}>
+      <div
+        className={cls(
+          "relative flex flex-col",
+          mine ? "max-w-[88%] items-end sm:max-w-[78%]" : m.cards?.length ? "w-full max-w-full items-start sm:max-w-[620px]" : "max-w-[92%] items-start sm:max-w-[78%]",
+        )}
+      >
         <div
           onDoubleClick={() => react(mine ? "❤️" : "👍")}
           onContextMenu={(e) => {
@@ -156,7 +161,7 @@ function Bubble({ message: m }: { message: Message }) {
           onTouchMove={endPress}
           className={cls(
             "relative select-text rounded-2xl px-3.5 py-2.5 shadow-sm",
-            mine ? "rounded-br-md bg-owner text-owner-ink" : "rounded-bl-md border border-line bg-surface",
+            mine ? "rounded-br-md bg-owner text-owner-ink" : "rounded-bl-md glass",
           )}
         >
           {m.attachments?.length ? <Attachments items={m.attachments} mine={mine} /> : null}
@@ -165,7 +170,7 @@ function Bubble({ message: m }: { message: Message }) {
           {reactions.length > 0 && (
             <button
               onClick={() => setPicker(true)}
-              className={cls("pop-in absolute -bottom-3 flex gap-0.5 rounded-full border border-line bg-surface px-1.5 py-0.5 text-sm shadow", mine ? "left-2" : "right-2")}
+              className={cls("pop-in absolute -bottom-3 flex gap-0.5 rounded-full border border-line bg-surface-solid px-1.5 py-0.5 text-sm shadow", mine ? "left-2" : "right-2")}
               aria-label="Reactions"
             >
               {reactions.map((r, i) => (
@@ -174,7 +179,12 @@ function Bubble({ message: m }: { message: Message }) {
             </button>
           )}
         </div>
-        <div className={cls("mt-1 flex items-center gap-2 px-1 text-[11px] text-ink-3", reactions.length > 0 && "mt-3.5")}>
+        {m.author === "motzo" && m.cards?.length ? (
+          <div className={cls("w-full", reactions.length > 0 && "mt-2")}>
+            <MessageCards message={m} />
+          </div>
+        ) : null}
+        <div className={cls("mt-1 flex items-center gap-2 px-1 text-[11px] text-ink-3", reactions.length > 0 && !m.cards?.length && "mt-3.5")}>
           <button onClick={() => setShowFull((x) => !x)} className="hover:text-ink-2" title={fullStamp(m.at)}>
             {showFull ? fullStamp(m.at) : timeOnly(m.at)}
           </button>
@@ -185,7 +195,7 @@ function Bubble({ message: m }: { message: Message }) {
           </button>
         </div>
         {picker && (
-          <div className={cls("pop-in absolute -top-11 z-20 flex gap-1 rounded-full border border-line bg-surface p-1 shadow-lg", mine ? "right-0" : "left-0")}>
+          <div className={cls("pop-in absolute -top-11 z-20 flex gap-1 rounded-full border border-line glass-strong p-1 shadow-lg", mine ? "right-0" : "left-0")}>
             {REACTIONS.map((e) => (
               <button key={e} onClick={() => react(e)} className={cls("grid h-9 w-9 place-items-center rounded-full text-xl hover:bg-surface-2", m.reactions?.owner === e && "bg-accent-soft")}>
                 {e}
@@ -196,7 +206,6 @@ function Bubble({ message: m }: { message: Message }) {
             </button>
           </div>
         )}
-        {m.author === "motzo" && <div className="w-full sm:min-w-[380px]"><MessageCards message={m} /></div>}
       </div>
     </div>
   );
@@ -290,23 +299,25 @@ function Viewer({ att, onClose }: { att: Attachment; onClose: () => void }) {
   }, [att.id]);
   const src = url ?? att.thumb ?? null;
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black/90" onClick={onClose}>
-      <div className="flex justify-end p-3">
-        <button className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white" aria-label="Close">
-          <Icon name="close" />
-        </button>
+    <Portal>
+      <div className="fixed inset-0 z-[60] flex flex-col bg-black/90" onClick={onClose}>
+        <div className="flex justify-end p-3">
+          <button className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white" aria-label="Close">
+            <Icon name="close" />
+          </button>
+        </div>
+        <div className="flex flex-1 items-center justify-center p-3" onClick={(e) => e.stopPropagation()}>
+          {att.kind === "video" && url ? (
+            <video src={url} controls autoPlay className="max-h-full max-w-full rounded-lg" />
+          ) : src ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={src} alt={att.name} className="max-h-full max-w-full rounded-lg object-contain" />
+          ) : (
+            <p className="text-white">This file isn&apos;t on this device any more.</p>
+          )}
+        </div>
+        {att.reading && <p className="p-4 text-center text-sm text-white/80">Motzo read: {att.reading}</p>}
       </div>
-      <div className="flex flex-1 items-center justify-center p-3" onClick={(e) => e.stopPropagation()}>
-        {att.kind === "video" && url ? (
-          <video src={url} controls autoPlay className="max-h-full max-w-full rounded-lg" />
-        ) : src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={att.name} className="max-h-full max-w-full rounded-lg object-contain" />
-        ) : (
-          <p className="text-white">This file isn&apos;t on this device any more.</p>
-        )}
-      </div>
-      {att.reading && <p className="p-4 text-center text-sm text-white/80">Motzo read: {att.reading}</p>}
-    </div>
+    </Portal>
   );
 }

@@ -152,7 +152,7 @@ export function Composer() {
             </button>
           </div>
         ) : (
-          <div className="rounded-[26px] border border-line bg-surface p-2 shadow-[var(--shadow)] focus-within:border-ink-3/50">
+          <div className="glass rounded-[26px] p-2 shadow-[var(--shadow)] focus-within:border-ink-3/50">
             <textarea
               ref={area}
               rows={1}
@@ -174,7 +174,7 @@ export function Composer() {
                   <Icon name="plus" className="h-[18px] w-[18px]" />
                 </button>
                 {menu && (
-                  <div className="pop-in absolute bottom-12 left-0 z-30 w-60 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
+                  <div className="pop-in absolute bottom-12 left-0 z-30 w-60 overflow-hidden rounded-2xl border border-line glass-strong shadow-xl">
                     <MenuItem icon="camera" label="Camera" sub="Photo, video or lens" onClick={() => { setMenu(false); ui.openCamera({ mode: "photo" }); }} />
                     <MenuItem icon="video" label="Photos & videos" sub="From your library" onClick={() => pickMedia.current?.click()} />
                     <MenuItem icon="doc" label="Document" sub="Insurance card, invoice, PDF" onClick={() => pickDoc.current?.click()} />

@@ -286,12 +286,61 @@ function Reminders() {
 }
 
 function History() {
-  const { state, activeVehicle } = useMotzo();
+  const { state, update, activeVehicle } = useMotzo();
+  const ui = useUi();
   const jobs = state.jobs.filter((j) => j.vehicleId === activeVehicle?.id).slice().reverse();
   const log = state.mileageLog.filter((m) => m.vehicleId === activeVehicle?.id).slice(-10).reverse();
+  const issues = (state.issues ?? []).filter((i) => i.vehicleId === activeVehicle?.id).slice().reverse();
+  const setIssue = (id: string, status: "open" | "fixed") =>
+    update((s) => ({ ...s, issues: (s.issues ?? []).map((i) => (i.id === id ? { ...i, status, fixedAt: status === "fixed" ? nowIso() : undefined } : i)) }));
+  const issueTone = { safe_to_drive: "text-good", drive_carefully: "text-warn", do_not_drive: "text-bad" } as const;
+  const issueText = { safe_to_drive: "Safe to drive", drive_carefully: "Drive carefully", do_not_drive: "Don't drive it" } as const;
   return (
     <div className="space-y-4">
+      {issues.length > 0 && (
+        <section className="space-y-2">
+          <h3 className="text-sm font-bold">Problems found</h3>
+          {issues.map((i) => (
+            <div key={i.id} className="card flex gap-3 p-3 text-sm">
+              {i.thumb && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={i.thumb} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex justify-between gap-2">
+                  <p className="font-semibold">{i.title}</p>
+                  <span className={cls("shrink-0 text-xs font-semibold", i.status === "fixed" ? "text-good" : issueTone[i.urgency])}>
+                    {i.status === "fixed" ? "Fixed" : issueText[i.urgency]}
+                  </span>
+                </div>
+                <p className="line-clamp-2 text-ink-2">{i.summary}</p>
+                <p className="text-xs text-ink-3">
+                  {fullStamp(i.at)}
+                  {i.costLow !== null && i.costHigh !== null ? ` · ${money(i.costLow)}–${money(i.costHigh)}` : ""}
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-3 text-xs font-semibold">
+                  {i.status === "open" ? (
+                    <>
+                      <button className="text-accent" onClick={() => ui.open({ type: "newQuote", shopType: i.shopType ?? "other", job: i.title })}>
+                        Get quotes
+                      </button>
+                      <button className="text-ink-2" onClick={() => setIssue(i.id, "fixed")}>
+                        Mark fixed
+                      </button>
+                    </>
+                  ) : (
+                    <button className="text-ink-2" onClick={() => setIssue(i.id, "open")}>
+                      Not fixed yet
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
       <section className="space-y-2">
+        {issues.length > 0 && <h3 className="text-sm font-bold">Jobs</h3>}
         {jobs.length === 0 && <p className="text-sm text-ink-2">No jobs yet. Accepted quotes and oil changes show up here.</p>}
         {jobs.map((j) => (
           <div key={j.id} className="card p-4 text-sm">
@@ -489,7 +538,7 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
   return (
     <div className="flex rounded-full bg-surface-2 p-1">
       {options.map(([v, label]) => (
-        <button key={v} onClick={() => onChange(v)} className={cls("flex-1 rounded-full py-2 text-sm font-semibold", v === value ? "bg-surface shadow" : "text-ink-3")}>
+        <button key={v} onClick={() => onChange(v)} className={cls("flex-1 rounded-full py-2 text-sm font-semibold", v === value ? "bg-surface-solid shadow" : "text-ink-3")}>
           {label}
         </button>
       ))}

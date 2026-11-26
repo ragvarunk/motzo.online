@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.8.0",
+    "@supabase/supabase-js": "2.119.0",
     "idb-keyval": "6.2.1",
     "next": "16.4.6",
     "react": "19.2.9",

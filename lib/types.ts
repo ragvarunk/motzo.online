@@ -71,6 +71,41 @@ export interface Estimate {
   insuranceNote: string;
 }
 
+/** Motzo's read of a photo or video of the vehicle: what it sees and what it means. */
+export interface PhotoReport {
+  title: string;
+  seen: string;
+  problem: string;
+  confidence: "high" | "medium" | "low";
+  severity: "minor" | "moderate" | "serious";
+  urgency: "safe_to_drive" | "drive_carefully" | "do_not_drive";
+  safetyReason: string;
+  fixBy: string;
+  findings: { label: string; value: string }[];
+  doNow: string[];
+  /** Small preview of the photo the report is about. */
+  thumb?: string;
+  photoId?: string;
+}
+
+/** Something Motzo found that the owner saved to the car's record. */
+export interface VehicleIssue {
+  id: string;
+  vehicleId: string;
+  at: string;
+  title: string;
+  summary: string;
+  urgency: PhotoReport["urgency"];
+  costLow: number | null;
+  costHigh: number | null;
+  shopType: ShopType | null;
+  photoId?: string;
+  thumb?: string;
+  chatId?: string;
+  status: "open" | "fixed";
+  fixedAt?: string;
+}
+
 export interface PhotoNeeded {
   label: string;
   why: string;
@@ -103,6 +138,15 @@ export interface ShopSearch {
 
 export type CardData =
   | { kind: "estimate"; estimate: Estimate }
+  | {
+      kind: "photo_report";
+      report: PhotoReport;
+      estimate?: Estimate;
+      photos?: PhotoNeeded[];
+      search?: { shopType: ShopType; searchText: string };
+      offerQuotes?: boolean;
+      savedIssueId?: string;
+    }
   | { kind: "photos_needed"; photos: PhotoNeeded[] }
   | { kind: "insurance_found"; insurance: InsuranceFound; documentId?: string; saved?: boolean }
   | { kind: "vehicle_found"; found: VehicleFound; saved?: boolean }
@@ -276,4 +320,6 @@ export interface MotzoState {
   lastShopSearch: ShopSearch | null;
   settings: Settings;
   mileageLog: { vehicleId: string; at: string; miles: number; source: "owner" | "photo" | "phone" }[];
+  /** Problems the owner saved to a vehicle's record from a photo report. */
+  issues: VehicleIssue[];
 }

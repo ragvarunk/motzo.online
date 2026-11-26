@@ -23,7 +23,7 @@ export function Sidebar({ onNavigate, onClose }: { onNavigate?: () => void; onCl
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-surface">
+    <div className="glass-flat flex h-full w-full flex-col">
       <div className="flex items-center gap-2 px-4 pb-2 pt-[max(env(safe-area-inset-top),14px)]">
         <EagleAvatar size={30} />
         <span className="flex-1 text-lg font-extrabold tracking-tight">Motzo</span>
@@ -149,7 +149,7 @@ function ChatRow({ chat, active, onOpen }: { chat: ChatThread; active: boolean; 
         <Icon name="dots" className="h-4 w-4" strokeWidth={3.2} />
       </button>
       {menu && (
-        <div className="pop-in absolute right-0 top-full z-40 mt-1 w-40 overflow-hidden rounded-xl border border-line bg-surface py-1 text-sm shadow-xl">
+        <div className="pop-in absolute right-0 top-full z-40 mt-1 w-40 overflow-hidden rounded-xl border border-line glass-strong py-1 text-sm shadow-xl">
           <button
             className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-surface-2"
             onClick={() => {
