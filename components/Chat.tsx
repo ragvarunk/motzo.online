@@ -187,7 +187,7 @@ function Bubble({ message: m }: { message: Message }) {
             </button>
           </div>
         )}
-        {m.author === "motzo" && <div className="w-full min-w-[min(420px,80vw)]"><MessageCards message={m} /></div>}
+        {m.author === "motzo" && <div className="w-full sm:min-w-[380px]"><MessageCards message={m} /></div>}
       </div>
     </div>
   );
