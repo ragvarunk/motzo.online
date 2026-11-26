@@ -1,0 +1,10 @@
+{
+  "name": "Motzo",
+  "short_name": "Motzo",
+  "description": "Your vehicle's AI helper",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#2f5bff",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
