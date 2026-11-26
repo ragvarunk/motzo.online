@@ -44,6 +44,8 @@ npm run dev
 3. Add the environment variables from `.env.example` that you have (all optional).
 4. Deploy.
 
+Branches: `main` is the live site. Every push to `main` goes live on motzo.online by itself (Vercel's production branch is `main`). Pushes to any other branch make a preview link only.
+
 Google Maps: enable **Places API (New)** for `GOOGLE_MAPS_API_KEY` (server only) and **Maps Embed API** for `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` (restrict it to your domain).
 
 ## Motzo's voice
@@ -55,4 +57,4 @@ Later option: a voice server you run yourself, used only when the ElevenLabs key
 - **Speaches** (`ghcr.io/speaches-ai/speaches:latest-cpu`, port 8000): Kokoro for speech (Apache 2.0) and faster-whisper for transcripts. Runs on a small CPU server. Defaults in this app already match it.
 - **VoiceStudio** (`ghcr.io/debpalash/voicestudio:stable`, port 3900): set `MOTZO_TTS_MODEL` and `MOTZO_TTS_VOICE` to its names. Check each model's license before commercial use; it is much faster on a GPU.
 
-Motzo uses **Speaches**. A ready-to-run setup (Speaches plus automatic HTTPS) is in [`voice-server/`](voice-server/README.md): start it on a server, then set `MOTZO_VOICE_URL` and `MOTZO_VOICE_API_KEY` in Vercel. Replies are spoken sentence by sentence, so the voice starts quickly.
+For Speaches, a ready-to-run setup (Speaches plus automatic HTTPS) is in [`voice-server/`](voice-server/README.md): start it on a server, then set `MOTZO_VOICE_URL` and `MOTZO_VOICE_API_KEY` in Vercel. Replies are spoken sentence by sentence, so the voice starts quickly.
