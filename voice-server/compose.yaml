@@ -1,0 +1,45 @@
+# Motzo's voice server: Speaches (Kokoro voice + faster-whisper transcripts) behind
+# Caddy, which gets a free HTTPS certificate for VOICE_DOMAIN automatically.
+# Runs on a small CPU server (2 vCPU / 4 GB RAM or more). See README.md.
+services:
+  speaches:
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    restart: unless-stopped
+    environment:
+      # Every request must carry "Authorization: Bearer <API_KEY>" (except /health).
+      API_KEY: ${SPEACHES_API_KEY:?Set SPEACHES_API_KEY in .env}
+      # Download Motzo's voice and listening models on first start.
+      PRELOAD_MODELS: '["speaches-ai/Kokoro-82M-v1.0-ONNX","Systran/faster-whisper-small"]'
+      # Keep the voice loaded so replies start quickly.
+      TTS_MODEL_TTL: "-1"
+      STT_MODEL_TTL: "-1"
+      # No web playground on a public server.
+      ENABLE_UI: "false"
+    volumes:
+      - hf-hub-cache:/home/ubuntu/.cache/huggingface/hub
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://0.0.0.0:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      VOICE_DOMAIN: ${VOICE_DOMAIN:?Set VOICE_DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - speaches
+
+volumes:
+  hf-hub-cache:
+  caddy-data:
+  caddy-config:

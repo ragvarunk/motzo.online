@@ -24,34 +24,69 @@ function cleanForSpeech(text: string) {
     .trim();
 }
 
+/** Splits a reply into sentence-sized pieces so the first one can play while the rest are made. */
+function chunksForSpeech(text: string, max = 220): string[] {
+  const sentences = text.match(/[^.!?\n]+[.!?]*\s*/g) ?? [text];
+  const out: string[] = [];
+  let cur = "";
+  for (const s of sentences) {
+    if (cur && (cur + s).length > max) {
+      out.push(cur.trim());
+      cur = "";
+    }
+    cur += s;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+
+async function fetchVoice(text: string): Promise<Blob | null> {
+  try {
+    const res = await api("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    return res.ok ? await res.blob() : null;
+  } catch {
+    return null;
+  }
+}
+
+function playBlob(blob: Blob): Promise<boolean> {
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  currentAudio = audio;
+  return new Promise<boolean>((resolve) => {
+    const done = (ok: boolean) => {
+      URL.revokeObjectURL(url);
+      resolve(ok && currentAudio === audio);
+    };
+    audio.onended = () => done(true);
+    audio.onerror = () => done(false);
+    audio.play().catch(() => done(false));
+  });
+}
+
 export async function speak(text: string, useCloudVoice: boolean): Promise<void> {
   stopSpeaking();
   const clean = cleanForSpeech(text);
   if (!clean) return;
   if (useCloudVoice) {
-    try {
-      const res = await api("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: clean }),
-      });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        currentAudio = audio;
-        await new Promise<void>((resolve) => {
-          audio.onended = () => resolve();
-          audio.onerror = () => resolve();
-          audio.play().catch(() => resolve());
-        });
-        URL.revokeObjectURL(url);
-        if (currentAudio === audio) currentAudio = null;
-        return;
+    const chunks = chunksForSpeech(clean);
+    const first = await fetchVoice(chunks[0]);
+    if (first) {
+      let blob: Blob | null = first;
+      for (let i = 0; blob; i++) {
+        const next = i + 1 < chunks.length ? fetchVoice(chunks[i + 1]) : null;
+        const finished = await playBlob(blob);
+        if (!finished) return; // stopped, or playback blocked
+        blob = next ? await next : null;
       }
-    } catch {
-      /* fall back to the device voice */
+      currentAudio = null;
+      return;
     }
+    // Voice server unreachable: fall back to the device voice.
   }
   if (typeof speechSynthesis === "undefined") return;
   await new Promise<void>((resolve) => {

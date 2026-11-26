@@ -53,4 +53,4 @@ Motzo's own voice and audio transcripts come from a voice server you run yoursel
 - **Speaches** (`ghcr.io/speaches-ai/speaches:latest-cpu`, port 8000): Kokoro for speech (Apache 2.0) and faster-whisper for transcripts. Runs on a small CPU server. Defaults in this app already match it.
 - **VoiceStudio** (`ghcr.io/debpalash/voicestudio:stable`, port 3900): set `MOTZO_TTS_MODEL` and `MOTZO_TTS_VOICE` to its names. Check each model's license before commercial use; it is much faster on a GPU.
 
-Put the server behind HTTPS, set its API key, then set `MOTZO_VOICE_URL` and `MOTZO_VOICE_API_KEY` in Vercel.
+Motzo uses **Speaches**. A ready-to-run setup (Speaches plus automatic HTTPS) is in [`voice-server/`](voice-server/README.md): start it on a server, then set `MOTZO_VOICE_URL` and `MOTZO_VOICE_API_KEY` in Vercel. Replies are spoken sentence by sentence, so the voice starts quickly.
