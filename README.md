@@ -23,7 +23,7 @@ Any key that isn't set runs that part in sample mode, clearly labelled "Sample":
 | --- | --- |
 | `ANTHROPIC_API_KEY` | Motzo gives keyword-based sample answers; lens says it needs the key |
 | `GOOGLE_MAPS_API_KEY` | Three "Sample …" shops instead of real ones |
-| `ELEVENLABS_API_KEY` | The device's own voice; audio files aren't transcribed |
+| `MOTZO_VOICE_URL` | The device's own voice; audio files aren't transcribed |
 
 Shops aren't connected to Motzo yet (no business API, agent-to-agent link or text channel). Sample shops answer with sample quotes so you can try the whole flow; **real shops are shown as "not contacted" and nothing is sent to them.**
 
@@ -45,3 +45,12 @@ npm run dev
 4. Deploy.
 
 Google Maps: enable **Places API (New)** for `GOOGLE_MAPS_API_KEY` (server only) and **Maps Embed API** for `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` (restrict it to your domain).
+
+## Motzo's voice (self-hosted, open source)
+
+Motzo's own voice and audio transcripts come from a voice server you run yourself, not a paid voice API. Any server with the OpenAI audio API works:
+
+- **Speaches** (`ghcr.io/speaches-ai/speaches:latest-cpu`, port 8000): Kokoro for speech (Apache 2.0) and faster-whisper for transcripts. Runs on a small CPU server. Defaults in this app already match it.
+- **VoiceStudio** (`ghcr.io/debpalash/voicestudio:stable`, port 3900): set `MOTZO_TTS_MODEL` and `MOTZO_TTS_VOICE` to its names. Check each model's license before commercial use; it is much faster on a GPU.
+
+Put the server behind HTTPS, set its API key, then set `MOTZO_VOICE_URL` and `MOTZO_VOICE_API_KEY` in Vercel.
