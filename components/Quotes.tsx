@@ -8,7 +8,7 @@ import { useMotzo } from "@/lib/store";
 import type { Job, Quote, QuoteRequest, ShopSummary, ShopType } from "@/lib/types";
 import { cls, fullStamp, money, nowIso, SHOP_TYPE_LABEL, uid, vehicleName } from "@/lib/util";
 import { useEngine } from "./ChatEngine";
-import { Icon, PanelHeader, useUi } from "./ui";
+import { Icon, PanelHeader, Portal, useUi } from "./ui";
 
 /** Confirm screen before Motzo asks any business for a quote. Nothing goes out until the owner presses the button. */
 export function NewQuotePanel({ shopType, job: jobIn, onClose }: { shopType: ShopType; job: string; onClose: () => void }) {
@@ -445,43 +445,45 @@ function AcceptSheet({ quote, req, onCancel, onDone }: { quote: Quote; req: Quot
   };
 
   return (
-    <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/40 md:items-center" onClick={onCancel}>
-      <div className="sheet-up w-full max-w-md space-y-4 rounded-t-3xl bg-surface p-5 pb-[max(env(safe-area-inset-bottom),20px)] md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-        <div>
-          <h3 className="text-lg font-bold">Accept {quote.shop.name}?</h3>
-          <p className="text-sm text-ink-2">
-            {money(quote.total)} · {quote.earliest}. Only this shop gets your contact details, so they can book you in.
-          </p>
-        </div>
-        <div className="grid gap-3">
+    <Portal>
+      <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/40 md:items-center" onClick={onCancel}>
+        <div className="sheet-up w-full max-w-md space-y-4 rounded-t-3xl glass-strong p-5 pb-[max(env(safe-area-inset-bottom),20px)] md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
           <div>
-            <label className="label" htmlFor="oname">Your name</label>
-            <input id="oname" className="field" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+            <h3 className="text-lg font-bold">Accept {quote.shop.name}?</h3>
+            <p className="text-sm text-ink-2">
+              {money(quote.total)} · {quote.earliest}. Only this shop gets your contact details, so they can book you in.
+            </p>
           </div>
-          <div>
-            <label className="label" htmlFor="ophone">Your phone</label>
-            <input id="ophone" className="field" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" />
+          <div className="grid gap-3">
+            <div>
+              <label className="label" htmlFor="oname">Your name</label>
+              <input id="oname" className="field" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+            </div>
+            <div>
+              <label className="label" htmlFor="ophone">Your phone</label>
+              <input id="ophone" className="field" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="tel" />
+            </div>
+            <div>
+              <label className="label" htmlFor="oemail">Your email (optional)</label>
+              <input id="oemail" className="field" value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" autoComplete="email" />
+            </div>
           </div>
-          <div>
-            <label className="label" htmlFor="oemail">Your email (optional)</label>
-            <input id="oemail" className="field" value={email} onChange={(e) => setEmail(e.target.value)} inputMode="email" autoComplete="email" />
+          <div className="space-y-2 text-sm">
+            {email.trim() && <Toggle on={shareEmail} set={setShareEmail} label="Share my email too" />}
+            {policy && <Toggle on={shareInsurance} set={setShareInsurance} label={`Share my insurance (${policy.insurer}) so they can bill it`} />}
           </div>
-        </div>
-        <div className="space-y-2 text-sm">
-          {email.trim() && <Toggle on={shareEmail} set={setShareEmail} label="Share my email too" />}
-          {policy && <Toggle on={shareInsurance} set={setShareInsurance} label={`Share my insurance (${policy.insurer}) so they can bill it`} />}
-        </div>
-        {quote.channel === "sample" && <p className="rounded-xl bg-warn/10 p-3 text-xs text-ink-2">This is a sample shop. Accepting shows how it works; nothing is sent anywhere.</p>}
-        <div className="flex gap-2">
-          <button className="btn btn-ghost flex-1" onClick={onCancel}>
-            Not yet
-          </button>
-          <button className="btn btn-primary flex-1" onClick={go} disabled={!name.trim() || !phone.trim()}>
-            Accept and share
-          </button>
+          {quote.channel === "sample" && <p className="rounded-xl bg-warn/10 p-3 text-xs text-ink-2">This is a sample shop. Accepting shows how it works; nothing is sent anywhere.</p>}
+          <div className="flex gap-2">
+            <button className="btn btn-ghost flex-1" onClick={onCancel}>
+              Not yet
+            </button>
+            <button className="btn btn-primary flex-1" onClick={go} disabled={!name.trim() || !phone.trim()}>
+              Accept and share
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }
 

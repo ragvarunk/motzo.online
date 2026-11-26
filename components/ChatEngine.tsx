@@ -6,7 +6,7 @@ import { blobToBase64, compressImage, kindOf, thumbnail, videoFrames } from "@/l
 import { speak } from "@/lib/speech";
 import { languageByCode } from "@/lib/languages";
 import { putFile, useMotzo } from "@/lib/store";
-import type { Attachment, CardData, Message, MotzoState, ShopType } from "@/lib/types";
+import type { Attachment, CardData, Estimate, Message, MotzoState, ShopType } from "@/lib/types";
 import { nowIso, timeZoneName, uid, vehicleName } from "@/lib/util";
 import type { MotzoReply } from "@/lib/demo";
 import { useRobot } from "./Robot";
@@ -235,22 +235,46 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
         }
 
         const cards: CardData[] = [];
-        if (data.estimate) {
-          const e = data.estimate;
+        const estimate: Estimate | undefined = data.estimate
+          ? {
+              part: data.estimate.part,
+              work: data.estimate.work,
+              costLow: data.estimate.cost_low,
+              costHigh: data.estimate.cost_high,
+              basis: data.estimate.basis,
+              shopType: data.estimate.shop_type,
+              today: data.estimate.today,
+              urgency: data.estimate.urgency,
+              insuranceNote: data.estimate.insurance_note,
+            }
+          : undefined;
+        const report = data.photo_report;
+        const photoAtt = attachments.find((a) => a.kind === "image" || a.kind === "video");
+        if (report && photoAtt) {
+          // One clear card for a photo: what Motzo sees, what it means, what it costs and what to do.
           cards.push({
-            kind: "estimate",
-            estimate: {
-              part: e.part,
-              work: e.work,
-              costLow: e.cost_low,
-              costHigh: e.cost_high,
-              basis: e.basis,
-              shopType: e.shop_type,
-              today: e.today,
-              urgency: e.urgency,
-              insuranceNote: e.insurance_note,
+            kind: "photo_report",
+            report: {
+              title: report.title,
+              seen: report.seen,
+              problem: report.problem,
+              confidence: report.confidence,
+              severity: report.severity,
+              urgency: report.urgency,
+              safetyReason: report.safety_reason,
+              fixBy: report.fix_by,
+              findings: report.findings ?? [],
+              doNow: report.do_now ?? [],
+              thumb: photoAtt.thumb,
+              photoId: photoAtt.id,
             },
+            estimate,
+            photos: data.photos_needed?.length ? data.photos_needed : undefined,
+            search: data.shop_search ? { shopType: data.shop_search.shop_type, searchText: data.shop_search.search_text } : undefined,
+            offerQuotes: data.offer_quotes,
           });
+        } else if (estimate) {
+          cards.push({ kind: "estimate", estimate });
         }
         if (data.insurance_found) {
           const docAtt = attachments.find((a) => a.kind === "document" || a.kind === "image");
@@ -275,9 +299,10 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
         if (data.vehicle_found && (data.vehicle_found.vin || data.vehicle_found.plate || data.vehicle_found.mileage)) {
           cards.push({ kind: "vehicle_found", found: data.vehicle_found });
         }
-        if (data.photos_needed?.length) cards.push({ kind: "photos_needed", photos: data.photos_needed });
-        if (data.shop_search) cards.push({ kind: "shop_search", search: { shopType: data.shop_search.shop_type, searchText: data.shop_search.search_text } });
-        if (data.offer_quotes) {
+        const inReport = Boolean(report && photoAtt);
+        if (!inReport && data.photos_needed?.length) cards.push({ kind: "photos_needed", photos: data.photos_needed });
+        if (!inReport && data.shop_search) cards.push({ kind: "shop_search", search: { shopType: data.shop_search.shop_type, searchText: data.shop_search.search_text } });
+        if (!inReport && data.offer_quotes) {
           const job = data.estimate ? data.estimate.work : data.shop_search?.search_text || "Service";
           const type: ShopType = data.estimate?.shop_type ?? data.shop_search?.shop_type ?? "other";
           cards.push({ kind: "offer_quotes", shopType: type, job });

@@ -18,6 +18,18 @@ export interface MotzoReply {
     urgency: "safe_to_drive" | "drive_carefully" | "do_not_drive";
     insurance_note: string;
   };
+  photo_report: null | {
+    title: string;
+    seen: string;
+    problem: string;
+    confidence: "high" | "medium" | "low";
+    severity: "minor" | "moderate" | "serious";
+    urgency: "safe_to_drive" | "drive_carefully" | "do_not_drive";
+    safety_reason: string;
+    fix_by: string;
+    findings: { label: string; value: string }[];
+    do_now: string[];
+  };
   photos_needed: { label: string; why: string }[];
   shop_search: null | { shop_type: ShopType; search_text: string };
   offer_quotes: boolean;
@@ -43,6 +55,7 @@ const empty = (): MotzoReply => ({
   reaction: "none",
   mood: "neutral",
   estimate: null,
+  photo_report: null,
   photos_needed: [],
   shop_search: null,
   offer_quotes: false,
@@ -121,6 +134,25 @@ export function demoReply(input: {
       { label: "Behind the rear-view mirror", why: "Cameras and sensors change the part and may need calibration" },
       { label: "VIN sticker or windshield VIN", why: "Lets shops find the exact glass" },
     ];
+    if (input.imageCount > 0) {
+      r.reply = "Sample answer (no AI key set yet): that's a crack, not a chip, so plan on a new windshield. Fix it within a week, and a glass shop can often do it today.";
+      r.photo_report = {
+        title: "Windshield crack from the edge",
+        seen: "A long crack running in from the lower edge of the windshield, on the driver's side.",
+        problem: "Cracks that reach the edge spread quickly with bumps and temperature changes, so this needs a replacement, not a resin repair.",
+        confidence: "medium",
+        severity: "moderate",
+        urgency: "drive_carefully",
+        safety_reason: "You can drive carefully for now, but a crack in the driver's view can spread suddenly and fails inspection.",
+        fix_by: "Within a week",
+        findings: [
+          { label: "Damage", value: "Crack, about 10 to 12 in" },
+          { label: "Where", value: "Lower edge, driver's side" },
+          { label: "Repair or replace", value: "Replace" },
+        ],
+        do_now: ["Avoid car washes and slamming doors", "Don't blast the defroster on high", "Keep it out of direct sun when you can"],
+      };
+    }
     r.shop_search = { shop_type: "glass", search_text: "windshield replacement" };
     r.offer_quotes = true;
     r.attachment_notes = Array.from({ length: input.imageCount }, () => "Photo of windshield damage (sample reading)");
@@ -146,6 +178,24 @@ export function demoReply(input: {
       { label: "Wide photo of the side of the vehicle", why: "Shows where the damage is" },
       { label: "Close-up at an angle", why: "Shows depth of the dent and paint damage" },
     ];
+    if (input.imageCount > 0) {
+      r.reply = "Sample answer (no AI key set yet): that's a dent with some paint damage. It's safe to drive, and a body shop can usually fix it in a day or two.";
+      r.photo_report = {
+        title: "Dent with paint damage",
+        seen: "A dent in the body panel with scuffed and scratched paint around it.",
+        problem: "Because the paint is broken, paintless dent repair probably won't work; expect filling, sanding and repainting the panel.",
+        confidence: "medium",
+        severity: "minor",
+        urgency: "safe_to_drive",
+        safety_reason: "It's cosmetic, so it's safe to drive. Fix it before rust starts where the paint is broken.",
+        fix_by: "Within a month",
+        findings: [
+          { label: "Damage", value: "Dent and scratches" },
+          { label: "Paint", value: "Broken" },
+        ],
+        do_now: ["Wash the area and keep it dry", "Take photos now for an insurance claim"],
+      };
+    }
     r.shop_search = { shop_type: "body", search_text: "auto body collision repair" };
     r.offer_quotes = true;
     return r;

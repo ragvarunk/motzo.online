@@ -268,7 +268,7 @@ export function FloatingRobot({
         <div
           key={bubble}
           style={{ top: h * 0.22 }}
-          className="eagle-bubble absolute right-1 w-max max-w-[180px] -translate-y-full rounded-2xl rounded-br-sm bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-lg ring-1 ring-line"
+          className="eagle-bubble absolute right-1 w-max max-w-[180px] -translate-y-full rounded-2xl rounded-br-sm bg-surface-solid px-3 py-1.5 text-xs font-semibold text-ink shadow-lg ring-1 ring-line"
           role="status"
         >
           {bubble}

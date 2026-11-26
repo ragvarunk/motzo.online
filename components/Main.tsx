@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMotzo } from "@/lib/store";
 import { cls, milesBetween, nowIso, uid, vehicleName } from "@/lib/util";
+import { AccountPanel } from "./Account";
 import { CameraSheet } from "./CameraSheet";
 import { ChatList } from "./Chat";
 import { useEngine } from "./ChatEngine";
@@ -75,7 +76,7 @@ export function Main() {
               <Icon name="back" className="h-4 w-4 shrink-0 -rotate-90 text-ink-3" />
             </button>
             {vehicleMenu && (
-              <div className="pop-in absolute left-0 top-11 z-40 w-64 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
+              <div className="pop-in absolute left-0 top-11 z-40 w-64 overflow-hidden rounded-2xl border border-line glass-strong shadow-xl">
                 {state.vehicles.map((v) => (
                   <button
                     key={v.id}
@@ -113,7 +114,7 @@ export function Main() {
       </main>
 
       {/* Panels */}
-      {panel && wide && <aside className="sheet-up relative z-40 w-[420px] shrink-0 overflow-hidden border-l border-line bg-surface xl:w-[480px]">{panel}</aside>}
+      {panel && wide && <aside className="sheet-up relative z-40 w-[420px] shrink-0 overflow-hidden border-l border-line glass-strong xl:w-[480px]">{panel}</aside>}
       {panel && !wide && (
         <Sheet onClose={ui.close} wide>
           <div className="flex h-[90dvh] flex-col">{panel}</div>
@@ -150,6 +151,8 @@ function renderPanel(p: Panel, close: () => void, back: () => void) {
       return <HelpPanel onClose={close} />;
     case "learn":
       return <LearnPanel onClose={close} />;
+    case "account":
+      return <AccountPanel onClose={close} />;
     case "vehicle":
       return <VehiclePanel vehicleId={p.vehicleId} onClose={close} />;
   }

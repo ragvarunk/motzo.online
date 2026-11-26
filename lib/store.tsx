@@ -5,7 +5,8 @@ import { createStore, del, get, set } from "idb-keyval";
 import type { ChatThread, MotzoState, Message, Vehicle } from "./types";
 import { defaultLanguage } from "./languages";
 
-// Everything is kept on the owner's device for this first version.
+// Everything is kept on the owner's device. When they sign in, lib/sync.tsx
+// also saves it to their account so it follows them to other devices.
 
 const STATE_KEY = "motzo-state-v1";
 
@@ -27,6 +28,7 @@ export const initialState = (): MotzoState => ({
   lastShopSearch: null,
   settings: { speakAnswers: false, robotMotion: "full", robotSize: "normal", countMiles: false, language: "en-US" },
   mileageLog: [],
+  issues: [],
 });
 
 let idbStore: ReturnType<typeof createStore> | null = null;
@@ -38,8 +40,43 @@ function store() {
 export async function putFile(id: string, blob: Blob) {
   await set(`att:${id}`, blob, store());
 }
+
+/** Set while signed in: fetches a file from the owner's account when this device doesn't have it. */
+let remoteFiles: ((id: string) => Promise<Blob | undefined>) | null = null;
+export function setRemoteFileLoader(fn: typeof remoteFiles) {
+  remoteFiles = fn;
+}
+
 export async function getFile(id: string): Promise<Blob | undefined> {
-  return get(`att:${id}`, store());
+  const local = await get<Blob>(`att:${id}`, store()).catch(() => undefined);
+  if (local || !remoteFiles) return local;
+  const remote = await remoteFiles(id).catch(() => undefined);
+  if (remote) await set(`att:${id}`, remote, store()).catch(() => undefined);
+  return remote;
+}
+
+/** Ids of every file kept on this device (photos, videos, documents, voice notes). */
+export async function localFileIds(): Promise<string[]> {
+  const { keys } = await import("idb-keyval");
+  const all = await keys(store()).catch(() => [] as IDBValidKey[]);
+  return all.map(String).filter((k) => k.startsWith("att:")).map((k) => k.slice(4));
+}
+
+/** Brings an older or partial save up to the current shape. */
+export function normalizeState(saved: Partial<MotzoState> | null | undefined): MotzoState {
+  const base = initialState();
+  if (!saved) return base;
+  const merged: MotzoState = {
+    ...base,
+    ...saved,
+    version: 1,
+    chats: saved.chats ?? [],
+    issues: saved.issues ?? [],
+    activeChatId: saved.activeChatId ?? null,
+    settings: { ...base.settings, ...saved.settings, language: saved.settings?.language || defaultLanguage() },
+    owner: { ...base.owner, ...saved.owner },
+  } as MotzoState;
+  return migrate(merged);
 }
 
 type Updater = (s: MotzoState) => MotzoState;
@@ -52,6 +89,8 @@ interface Ctx {
   addMessage: (m: Message) => void;
   patchMessage: (id: string, patch: Partial<Message> | ((m: Message) => Message)) => void;
   resetAll: () => Promise<void>;
+  /** Swaps in a whole saved state (used when the owner's account loads on this device). */
+  replaceState: (s: MotzoState) => void;
   /** Conversations of the active vehicle, newest first. */
   vehicleChats: ChatThread[];
   activeChat: ChatThread | null;
@@ -125,16 +164,7 @@ export function MotzoProvider({ children }: { children: ReactNode }) {
       .then((saved) => {
         if (cancelled) return;
         if (saved && saved.version === 1) {
-          const base = initialState();
-          const merged: MotzoState = {
-            ...base,
-            ...saved,
-            chats: saved.chats ?? [],
-            activeChatId: saved.activeChatId ?? null,
-            settings: { ...base.settings, ...saved.settings, language: saved.settings?.language || defaultLanguage() },
-            owner: { ...base.owner, ...saved.owner },
-          };
-          setState(migrate(merged));
+          setState(normalizeState(saved));
         } else {
           setState((s) => ({ ...s, settings: { ...s.settings, language: defaultLanguage() } }));
         }
@@ -201,8 +231,10 @@ export function MotzoProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
-    setState(initialState());
+    setState({ ...initialState(), settings: { ...initialState().settings, language: defaultLanguage() } });
   }, []);
+
+  const replaceState = useCallback((next: MotzoState) => setState(normalizeState(next)), []);
 
   const activeVehicle = useMemo(
     () => state.vehicles.find((v) => v.id === state.activeVehicleId) ?? state.vehicles[0] ?? null,
@@ -219,8 +251,8 @@ export function MotzoProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ state, ready, update, activeVehicle, addMessage, patchMessage, resetAll, vehicleChats, activeChat, newChat, openChat, renameChat, deleteChat }),
-    [state, ready, update, activeVehicle, addMessage, patchMessage, resetAll, vehicleChats, activeChat, newChat, openChat, renameChat, deleteChat],
+    () => ({ state, ready, update, activeVehicle, addMessage, patchMessage, resetAll, replaceState, vehicleChats, activeChat, newChat, openChat, renameChat, deleteChat }),
+    [state, ready, update, activeVehicle, addMessage, patchMessage, resetAll, replaceState, vehicleChats, activeChat, newChat, openChat, renameChat, deleteChat],
   );
   return <MotzoCtx.Provider value={value}>{children}</MotzoCtx.Provider>;
 }

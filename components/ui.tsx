@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ShopType } from "@/lib/types";
 import { cls } from "@/lib/util";
@@ -16,7 +17,8 @@ export type Panel =
   | { type: "language" }
   | { type: "usage" }
   | { type: "help" }
-  | { type: "learn" };
+  | { type: "learn" }
+  | { type: "account" };
 
 interface UiCtx {
   panel: Panel | null;
@@ -84,6 +86,16 @@ export function useUi() {
   return c;
 }
 
+/**
+ * Renders children straight into <body>, so full-screen dialogs aren't trapped
+ * inside a frosted (blurred) panel, which would clip a position:fixed overlay.
+ */
+export function Portal({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? createPortal(children, document.body) : null;
+}
+
 /** True on screens at least `px` wide. */
 export function useMinWidth(px: number) {
   const [ok, setOk] = useState(false);
@@ -99,7 +111,7 @@ export function useMinWidth(px: number) {
 
 export function PanelHeader({ title, subtitle, onClose, onBack }: { title: string; subtitle?: string; onClose: () => void; onBack?: () => void }) {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-surface/95 px-4 py-3 backdrop-blur">
+    <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line px-4 py-3 glass-flat">
       {onBack && (
         <button onClick={onBack} className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2" aria-label="Back">
           <Icon name="back" />
@@ -127,7 +139,7 @@ export function Sheet({ children, onClose, wide }: { children: ReactNode; onClos
       <div
         onClick={(e) => e.stopPropagation()}
         className={cls(
-          "sheet-up scroll-thin flex max-h-[94dvh] w-full flex-col overflow-y-auto rounded-t-3xl bg-surface shadow-2xl md:rounded-3xl",
+          "sheet-up scroll-thin flex max-h-[94dvh] w-full flex-col overflow-y-auto rounded-t-3xl glass-strong shadow-2xl md:rounded-3xl",
           wide ? "md:max-w-2xl" : "md:max-w-lg",
         )}
       >
