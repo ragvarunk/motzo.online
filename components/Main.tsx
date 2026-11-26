@@ -176,7 +176,9 @@ function VehiclePanel({ vehicleId, onClose }: { vehicleId?: string; onClose: () 
 function SampleBanner() {
   const { services } = useEngine();
   const [hide, setHide] = useState(false);
-  if (services.ai || hide) return null;
+  // Wait until the server has said which keys are set, so the banner never
+  // flashes on a site that has its AI key.
+  if (!services.known || services.ai || hide) return null;
   return (
     <div className="flex items-center gap-2 bg-warn/12 px-4 py-2 text-xs text-ink-2">
       <span className="flex-1">

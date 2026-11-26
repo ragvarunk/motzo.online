@@ -25,7 +25,7 @@ interface SendInput {
 interface Engine {
   send: (input: SendInput) => Promise<string | null>;
   busy: boolean;
-  services: { ai: boolean; maps: boolean; voice: boolean; mapEmbed: boolean };
+  services: { ai: boolean; maps: boolean; voice: boolean; mapEmbed: boolean; known?: boolean };
   setServices: (s: Engine["services"]) => void;
   location: { lat: number; lng: number } | null;
   requestLocation: () => Promise<{ lat: number; lng: number } | null>;
@@ -56,7 +56,7 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
   const { state, activeVehicle, activeChat, addMessage, patchMessage } = useMotzo();
   const robot = useRobot();
   const [busy, setBusy] = useState(false);
-  const [services, setServices] = useState({ ai: false, maps: false, voice: false, mapEmbed: false });
+  const [services, setServices] = useState<Engine["services"]>({ ai: false, maps: false, voice: false, mapEmbed: false, known: false });
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;

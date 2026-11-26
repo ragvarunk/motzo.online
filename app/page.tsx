@@ -33,7 +33,7 @@ function App() {
   useEffect(() => {
     fetch("/api/status")
       .then((r) => r.json())
-      .then((s: ServiceStatus) => setServices({ ai: s.ai, maps: s.maps, voice: s.voice, mapEmbed: s.mapEmbed }))
+      .then((s: ServiceStatus) => setServices({ ai: s.ai, maps: s.maps, voice: s.voice, mapEmbed: s.mapEmbed, known: true }))
       .catch(() => undefined);
     const onCode = () => setNeedCode(true);
     window.addEventListener("motzo:access-code", onCode);
