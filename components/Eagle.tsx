@@ -65,10 +65,10 @@ function Wing({ ids, far }: { ids: Record<string, string>; far?: boolean }) {
     <g>
       <g className="eagle-primaries">
         {PRIMARIES.map((f, i) => (
-          <path key={i} d={f.d} fill={far ? "#1a0f07" : `url(#${ids.primary})`} stroke={far ? "none" : "#120a04"} strokeWidth={0.4} />
+          <path key={i} d={f.d} fill={far ? "#1a0f07" : `url(#${ids.primary})`} stroke={far ? "#6b4a2c" : "#a88158"} strokeOpacity={far ? 0.35 : 0.5} strokeWidth={0.5} />
         ))}
       </g>
-      <path d={WING_BODY} fill={far ? "#24150a" : `url(#${ids.wing})`} />
+      <path d={WING_BODY} fill={far ? "#24150a" : `url(#${ids.wing})`} stroke={far ? "#6b4a2c" : "#c9a57a"} strokeOpacity={far ? 0.35 : 0.45} strokeWidth={0.6} />
       {!far && (
         <>
           <path d={COVERTS} fill={`url(#${ids.coverts})`} opacity={0.95} />
@@ -105,8 +105,9 @@ export function Eagle({
     tail: `et-${uid}`,
     beak: `ek-${uid}`,
   };
-  const viewBox = crop === "head" ? "120 36 62 62" : "0 0 200 150";
-  const height = crop === "head" ? width : (width * 150) / 200;
+  // Tall enough for the raised wings above and the downstroke below.
+  const viewBox = crop === "head" ? "120 36 62 62" : "0 -70 200 250";
+  const height = crop === "head" ? width : (width * 250) / 200;
   return (
     <svg width={width} height={height} viewBox={viewBox} aria-hidden="true" className={`eagle eagle-${mode} ${className ?? ""}`} overflow="visible">
       <defs>
@@ -121,12 +122,12 @@ export function Eagle({
           <stop offset="1" stopColor="#cfcac0" />
         </radialGradient>
         <linearGradient id={ids.wing} x1="1" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#4d2f18" />
-          <stop offset="1" stopColor="#2a180b" />
+          <stop offset="0" stopColor="#6a4426" />
+          <stop offset="1" stopColor="#33200f" />
         </linearGradient>
         <linearGradient id={ids.coverts} x1="1" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor="#8a5f39" />
-          <stop offset="1" stopColor="#53331b" />
+          <stop offset="0" stopColor="#a8784a" />
+          <stop offset="1" stopColor="#62402a" />
         </linearGradient>
         <linearGradient id={ids.primary} x1="0" y1="1" x2="0" y2="0">
           <stop offset="0" stopColor="#2e1c0e" />
@@ -144,7 +145,7 @@ export function Eagle({
 
       <g className="eagle-bodybob">
         {/* far wing, behind everything */}
-        <g transform="translate(108 72)" opacity={0.95}>
+        <g transform="translate(108 72) scale(1.55)" opacity={0.95}>
           <g className="eagle-wing eagle-wing-far">
             <Wing ids={ids} far />
           </g>
@@ -193,7 +194,7 @@ export function Eagle({
         <circle cx="166.5" cy="66.2" r="0.6" fill="#7a5507" />
 
         {/* near wing, in front of the body */}
-        <g transform="translate(101 75)">
+        <g transform="translate(101 75) scale(1.6)">
           <g className="eagle-wing eagle-wing-near">
             <Wing ids={ids} />
           </g>

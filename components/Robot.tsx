@@ -62,7 +62,7 @@ const MOOD_MODE: Record<RobotMood, WingMode> = {
 export function RobotFace({ mood, size = 64, speaking = false }: { mood: RobotMood; size?: number; speaking?: boolean }) {
   const talking = speaking || mood === "talking";
   if (size <= 60) return <EagleAvatar size={size} talking={talking} />;
-  return <Eagle width={size * 1.25} mode={MOOD_MODE[mood]} talking={talking} />;
+  return <Eagle width={size * 1.1} mode={MOOD_MODE[mood]} talking={talking} />;
 }
 
 type Phase = "here" | "leaving" | "away" | "returning";
@@ -98,8 +98,8 @@ export function FloatingRobot({
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const phaseRef = useRef<Phase>("here");
   const wantBack = useRef(false);
-  const w = size === "small" ? 66 : 92;
-  const h = (w * 150) / 200;
+  const w = size === "small" ? 60 : 84;
+  const h = (w * 250) / 200;
   const flies = motion !== "still" && !prefersReducedMotion();
 
   const later = useCallback((ms: number, fn: () => void) => {
