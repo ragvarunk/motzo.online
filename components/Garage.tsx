@@ -418,7 +418,7 @@ function Privacy() {
   );
 }
 
-/** App settings: voice, robot, testing access code, and deleting everything. */
+/** App settings: voice, eagle, testing access code, and deleting everything. */
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const { state, update, resetAll } = useMotzo();
   const { services } = useEngine();
@@ -438,11 +438,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </span>
         </label>
         <div>
-          <p className="label">Robot movement</p>
-          <Segmented value={s.robotMotion} options={[["full", "Moves around"], ["calm", "Calm"], ["still", "Still"]]} onChange={(v) => set({ robotMotion: v })} />
+          <p className="label">Eagle movement</p>
+          <Segmented value={s.robotMotion} options={[["full", "Flies around"], ["calm", "Calm"], ["still", "Stays put"]]} onChange={(v) => set({ robotMotion: v })} />
         </div>
         <div>
-          <p className="label">Robot size</p>
+          <p className="label">Eagle size</p>
           <Segmented value={s.robotSize} options={[["normal", "Normal"], ["small", "Small"]]} onChange={(v) => set({ robotSize: v })} />
         </div>
         <div className="card space-y-1 p-4">

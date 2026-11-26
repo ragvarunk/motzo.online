@@ -9,7 +9,7 @@ import { RobotFace, RobotProvider } from "@/components/Robot";
 import { UiProvider } from "@/components/ui";
 import { VehicleForm } from "@/components/VehicleForm";
 import { CameraSheet } from "@/components/CameraSheet";
-import { useUi } from "@/components/ui";
+import { Icon, useUi } from "@/components/ui";
 
 export default function Page() {
   return (
@@ -58,6 +58,7 @@ function App() {
 function Welcome() {
   const [step, setStep] = useState<"hello" | "vehicle">("hello");
   const ui = useUi();
+  const { state, update } = useMotzo();
   return (
     <div className="min-h-dvh px-4 py-8 sm:py-14">
       <div className="mx-auto max-w-xl">
@@ -75,15 +76,24 @@ function Welcome() {
               ].map(([icon, text]) => (
                 <li key={icon} className="flex gap-3">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
+                    <Icon name={icon} className="h-5 w-5" />
                   </span>
                   <span className="pt-1.5 text-ink-2">{text}</span>
                 </li>
               ))}
             </ul>
-            <button className="btn btn-primary mt-8 w-full max-w-xs text-base" onClick={() => setStep("vehicle")}>
+            <div className="mt-8 w-full max-w-xs text-left">
+              <label className="label" htmlFor="w-name">What should I call you?</label>
+              <input
+                id="w-name"
+                className="field"
+                placeholder="Your first name"
+                autoComplete="given-name"
+                value={state.owner.name}
+                onChange={(e) => update((s) => ({ ...s, owner: { ...s.owner, name: e.target.value } }))}
+              />
+            </div>
+            <button className="btn btn-primary mt-3 w-full max-w-xs text-base" onClick={() => setStep("vehicle")}>
               Add my vehicle
             </button>
             <p className="mt-3 text-xs text-ink-3">No sign-up needed. Everything is saved on this device.</p>

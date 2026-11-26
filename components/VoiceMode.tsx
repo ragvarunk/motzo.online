@@ -24,7 +24,7 @@ export function VoiceMode() {
   const mediaRef = useRef<MediaRecorder | null>(null);
   const { services } = useEngine();
 
-  const lastMotzo = [...state.messages].reverse().find((m) => m.vehicleId === activeVehicle?.id && m.author === "motzo");
+  const lastMotzo = [...state.messages].reverse().find((m) => m.vehicleId === activeVehicle?.id && m.chatId === state.activeChatId && m.author === "motzo");
 
   const turn = useCallback(
     async (text: string) => {
@@ -41,7 +41,7 @@ export function VoiceMode() {
 
   const listen = useCallback(() => {
     stopSpeaking();
-    const r = makeRecognizer();
+    const r = makeRecognizer(state.settings.language);
     if (!r) return;
     recog.current?.abort();
     recog.current = r;

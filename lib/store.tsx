@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createStore, del, get, set } from "idb-keyval";
-import type { MotzoState, Message, Vehicle } from "./types";
+import type { ChatThread, MotzoState, Message, Vehicle } from "./types";
+import { defaultLanguage } from "./languages";
 
 // Everything is kept on the owner's device for this first version.
 
@@ -16,13 +17,15 @@ export const initialState = (): MotzoState => ({
   activeVehicleId: null,
   insurance: [],
   messages: [],
+  chats: [],
+  activeChatId: null,
   quoteRequests: [],
   jobs: [],
   sharing: [],
   savedShops: [],
   lastShops: [],
   lastShopSearch: null,
-  settings: { speakAnswers: false, robotMotion: "full", robotSize: "normal", countMiles: false },
+  settings: { speakAnswers: false, robotMotion: "full", robotSize: "normal", countMiles: false, language: "en-US" },
   mileageLog: [],
 });
 
@@ -49,6 +52,64 @@ interface Ctx {
   addMessage: (m: Message) => void;
   patchMessage: (id: string, patch: Partial<Message> | ((m: Message) => Message)) => void;
   resetAll: () => Promise<void>;
+  /** Conversations of the active vehicle, newest first. */
+  vehicleChats: ChatThread[];
+  activeChat: ChatThread | null;
+  newChat: () => void;
+  openChat: (id: string) => void;
+  renameChat: (id: string, title: string) => void;
+  deleteChat: (id: string) => void;
+}
+
+const newId = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+function titleFrom(text: string): string {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (!t) return "New chat";
+  return t.length > 42 ? `${t.slice(0, 40).trimEnd()}…` : t;
+}
+
+/** Older saves kept one long conversation per vehicle: give each its own chat. */
+function migrate(s: MotzoState): MotzoState {
+  if (s.messages.every((m) => m.chatId)) return s;
+  const chats = [...s.chats];
+  const byVehicle = new Map<string, string>();
+  const messages = s.messages.map((m) => {
+    if (m.chatId) return m;
+    let id = byVehicle.get(m.vehicleId);
+    if (!id) {
+      id = newId("c_");
+      byVehicle.set(m.vehicleId, id);
+      const mine = s.messages.filter((x) => x.vehicleId === m.vehicleId && !x.chatId);
+      const firstOwner = mine.find((x) => x.author === "owner" && x.text);
+      chats.push({ id, vehicleId: m.vehicleId, title: firstOwner ? titleFrom(firstOwner.text) : "Earlier chat", createdAt: mine[0].at, updatedAt: mine[mine.length - 1].at });
+    }
+    return { ...m, chatId: id };
+  });
+  return { ...s, chats, messages, activeChatId: s.activeChatId ?? [...byVehicle.values()].pop() ?? null };
+}
+
+/** Adds a message to the open chat of its vehicle, starting a chat when none is open. */
+function withMessage(s: MotzoState, m: Message): MotzoState {
+  let chatId = m.chatId;
+  let chats = s.chats;
+  let activeChatId = s.activeChatId;
+  if (!chatId) {
+    const open = s.chats.find((c) => c.id === s.activeChatId && c.vehicleId === m.vehicleId);
+    if (open) chatId = open.id;
+  }
+  if (!chatId || !chats.some((c) => c.id === chatId)) {
+    // A new conversation: the first message names it and opens it.
+    chatId = chatId || newId("c_");
+    chats = [...chats, { id: chatId, vehicleId: m.vehicleId, title: m.author === "owner" ? titleFrom(m.text) : "New chat", createdAt: m.at, updatedAt: m.at }];
+    activeChatId = chatId;
+  }
+  chats = chats.map((c) => {
+    if (c.id !== chatId) return c;
+    const title = c.title === "New chat" && m.author === "owner" && m.text ? titleFrom(m.text) : c.title;
+    return { ...c, title, updatedAt: m.at };
+  });
+  return { ...s, chats, activeChatId, messages: [...s.messages, { ...m, chatId }] };
 }
 
 const MotzoCtx = createContext<Ctx | null>(null);
@@ -65,7 +126,17 @@ export function MotzoProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (saved && saved.version === 1) {
           const base = initialState();
-          setState({ ...base, ...saved, settings: { ...base.settings, ...saved.settings }, owner: { ...base.owner, ...saved.owner } });
+          const merged: MotzoState = {
+            ...base,
+            ...saved,
+            chats: saved.chats ?? [],
+            activeChatId: saved.activeChatId ?? null,
+            settings: { ...base.settings, ...saved.settings, language: saved.settings?.language || defaultLanguage() },
+            owner: { ...base.owner, ...saved.owner },
+          };
+          setState(migrate(merged));
+        } else {
+          setState((s) => ({ ...s, settings: { ...s.settings, language: defaultLanguage() } }));
         }
       })
       .catch(() => {
@@ -87,7 +158,31 @@ export function MotzoProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback((fn: Updater) => setState((s) => fn(s)), []);
 
-  const addMessage = useCallback((m: Message) => setState((s) => ({ ...s, messages: [...s.messages, m] })), []);
+  const addMessage = useCallback((m: Message) => setState((s) => withMessage(s, m)), []);
+
+  const newChat = useCallback(() => setState((s) => ({ ...s, activeChatId: null })), []);
+  const openChat = useCallback(
+    (id: string) =>
+      setState((s) => {
+        const c = s.chats.find((x) => x.id === id);
+        return c ? { ...s, activeChatId: id, activeVehicleId: c.vehicleId } : s;
+      }),
+    [],
+  );
+  const renameChat = useCallback(
+    (id: string, title: string) => setState((s) => ({ ...s, chats: s.chats.map((c) => (c.id === id ? { ...c, title: title.trim() || c.title } : c)) })),
+    [],
+  );
+  const deleteChat = useCallback(
+    (id: string) =>
+      setState((s) => ({
+        ...s,
+        chats: s.chats.filter((c) => c.id !== id),
+        messages: s.messages.filter((m) => m.chatId !== id),
+        activeChatId: s.activeChatId === id ? null : s.activeChatId,
+      })),
+    [],
+  );
 
   const patchMessage = useCallback(
     (id: string, patch: Partial<Message> | ((m: Message) => Message)) =>
@@ -114,9 +209,18 @@ export function MotzoProvider({ children }: { children: ReactNode }) {
     [state.vehicles, state.activeVehicleId],
   );
 
+  const vehicleChats = useMemo(
+    () => state.chats.filter((c) => c.vehicleId === activeVehicle?.id).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [state.chats, activeVehicle?.id],
+  );
+  const activeChat = useMemo(
+    () => state.chats.find((c) => c.id === state.activeChatId && c.vehicleId === activeVehicle?.id) ?? null,
+    [state.chats, state.activeChatId, activeVehicle?.id],
+  );
+
   const value = useMemo(
-    () => ({ state, ready, update, activeVehicle, addMessage, patchMessage, resetAll }),
-    [state, ready, update, activeVehicle, addMessage, patchMessage, resetAll],
+    () => ({ state, ready, update, activeVehicle, addMessage, patchMessage, resetAll, vehicleChats, activeChat, newChat, openChat, renameChat, deleteChat }),
+    [state, ready, update, activeVehicle, addMessage, patchMessage, resetAll, vehicleChats, activeChat, newChat, openChat, renameChat, deleteChat],
   );
   return <MotzoCtx.Provider value={value}>{children}</MotzoCtx.Provider>;
 }

@@ -23,6 +23,8 @@ interface ChatBody {
     vehicleDetails: string;
     insurance: string;
     area: string;
+    language?: string;
+    ownerName?: string;
   };
   history: HistoryItem[];
   latest: {
@@ -102,6 +104,8 @@ export async function POST(req: Request) {
     c.vehicleDetails ? `Vehicle details: ${c.vehicleDetails}` : "",
     `Insurance on file: ${c.insurance || "none"}`,
     c.area ? `Owner's area: ${c.area}` : "",
+    c.ownerName ? `Owner's first name: ${String(c.ownerName).slice(0, 60)}` : "",
+    `Reply language: ${String(c.language || "English").slice(0, 40)}`,
     latest.notes?.length ? `Also attached: ${latest.notes.join("; ")}` : "",
   ]
     .filter(Boolean)

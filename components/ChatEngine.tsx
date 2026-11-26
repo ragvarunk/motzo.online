@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import { api, AccessCodeNeeded } from "@/lib/api";
 import { blobToBase64, compressImage, kindOf, thumbnail, videoFrames } from "@/lib/media";
 import { speak } from "@/lib/speech";
+import { languageByCode } from "@/lib/languages";
 import { putFile, useMotzo } from "@/lib/store";
 import type { Attachment, CardData, Message, MotzoState, ShopType } from "@/lib/types";
 import { nowIso, timeZoneName, uid, vehicleName } from "@/lib/util";
@@ -52,7 +53,7 @@ function insuranceLine(state: MotzoState, vehicleId: string): string {
 }
 
 export function ChatEngineProvider({ children }: { children: ReactNode }) {
-  const { state, activeVehicle, addMessage, patchMessage } = useMotzo();
+  const { state, activeVehicle, activeChat, addMessage, patchMessage } = useMotzo();
   const robot = useRobot();
   const [busy, setBusy] = useState(false);
   const [services, setServices] = useState({ ai: false, maps: false, voice: false, mapEmbed: false });
@@ -88,6 +89,9 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
     async (input: SendInput): Promise<string | null> => {
       const vehicle = activeVehicle;
       if (!vehicle) return null;
+      // Every message in this turn goes to the same chat, even if the owner opens another meanwhile.
+      const chatId = activeChat?.id ?? uid("c_");
+      const lang = stateRef.current.settings.language;
       const files = input.files ?? [];
       if (!input.text.trim() && files.length === 0 && !input.voiceNote) return null;
       setBusy(true);
@@ -164,6 +168,7 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
       const ownerMsg: Message = {
         id: uid("m_"),
         vehicleId: vehicle.id,
+        chatId,
         author: "owner",
         text: input.text.trim(),
         at: nowIso(),
@@ -175,7 +180,7 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
       // 3. Ask Motzo.
       const s = stateRef.current;
       const history = s.messages
-        .filter((m) => m.vehicleId === vehicle.id && !m.error)
+        .filter((m) => m.chatId === chatId && !m.error)
         .slice(-30)
         .map((m) => ({
           author: m.author,
@@ -207,6 +212,8 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
               vehicleDetails,
               insurance: insuranceLine(s, vehicle.id),
               area: s.owner.area,
+              language: languageByCode(lang).name,
+              ownerName: s.owner.name,
             },
             history,
             latest: { text: input.text.trim(), images, documents, notes },
@@ -279,6 +286,7 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
         addMessage({
           id: uid("m_"),
           vehicleId: vehicle.id,
+          chatId,
           author: "motzo",
           text: data.reply,
           at: nowIso(),
@@ -289,7 +297,7 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
         const mood = data.mood === "happy" ? "happy" : data.mood === "concerned" ? "concerned" : "idle";
         if (input.speakReply || s.settings.speakAnswers) {
           robot.setMood("talking");
-          await speak(data.reply, services.voice);
+          await speak(data.reply, services.voice, lang);
           robot.setMood(mood === "idle" ? "idle" : mood, 3000);
         } else {
           robot.setMood(mood, 3500);
@@ -299,6 +307,7 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
           addMessage({
             id: uid("m_"),
             vehicleId: vehicle.id,
+            chatId,
             author: "system",
             text: err instanceof Error ? err.message : "Motzo couldn't answer. Try again.",
             at: nowIso(),
@@ -325,7 +334,7 @@ export function ChatEngineProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [activeVehicle, addMessage, patchMessage, robot, services.voice],
+    [activeVehicle, activeChat?.id, addMessage, patchMessage, robot, services.voice],
   );
 
   const value = useMemo(

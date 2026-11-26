@@ -11,7 +11,12 @@ export type Panel =
   | { type: "newQuote"; shopType: ShopType; job: string }
   | { type: "garage"; tab?: "vehicles" | "insurance" | "reminders" | "history" | "record" | "privacy" }
   | { type: "vehicle"; vehicleId?: string }
-  | { type: "settings" };
+  | { type: "settings" }
+  | { type: "profile" }
+  | { type: "language" }
+  | { type: "usage" }
+  | { type: "help" }
+  | { type: "learn" };
 
 interface UiCtx {
   panel: Panel | null;
@@ -160,6 +165,17 @@ const PATHS: Record<string, string> = {
   trash: "M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
   keyboard: "M3 6h18v12H3zM7 10h.01M11 10h.01M15 10h.01M7 14h10",
   bolt: "M13 3L4 14h7l-1 7 9-11h-7z",
+  user: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0",
+  globe: "M12 21a9 9 0 100-18 9 9 0 000 18zM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z",
+  chart: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  help: "M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2.2M12 17h.01",
+  info: "M12 21a9 9 0 100-18 9 9 0 000 18zM12 11v5M12 8h.01",
+  logout: "M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  edit: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4",
+  dots: "M5 12h.01M12 12h.01M19 12h.01",
+  sidebar: "M4 5h16v14H4zM9 5v14",
+  compose: "M12 4H5v15h15v-7M18 3l3 3-8 8H10v-3z",
 };
 
 export function Icon({ name, className = "h-5 w-5", strokeWidth = 2 }: { name: keyof typeof PATHS | string; className?: string; strokeWidth?: number }) {

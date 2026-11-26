@@ -1,11 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Eagle, EagleAvatar, type WingMode } from "./Eagle";
 
-// Placeholder Motzo robot until Rag sends the real character picture. It has
-// the states the spec asks for (idle, listening, thinking, talking, happy,
-// concerned) and moves around the chat: up and down, toward and away from the
-// owner (by growing and shrinking), and next to new cards.
+// Motzo's character is an eagle (components/Eagle.tsx). The names here still
+// say "robot" so the rest of the app didn't need to change. It has the states
+// the spec asks for (idle, listening, thinking, talking, happy, concerned).
 
 export type RobotMood = "idle" | "listening" | "thinking" | "talking" | "happy" | "concerned";
 
@@ -46,88 +46,36 @@ export function useRobot() {
   return c;
 }
 
-const EYES: Record<RobotMood, { ry: number; dy: number }> = {
-  idle: { ry: 5, dy: 0 },
-  listening: { ry: 6, dy: 0 },
-  thinking: { ry: 3, dy: -2 },
-  talking: { ry: 5, dy: 0 },
-  happy: { ry: 2.5, dy: 0 },
-  concerned: { ry: 4, dy: 1 },
+const MOOD_MODE: Record<RobotMood, WingMode> = {
+  idle: "glide",
+  listening: "hover",
+  thinking: "flap",
+  talking: "hover",
+  happy: "hover",
+  concerned: "glide",
 };
 
+/**
+ * Motzo's eagle in a fixed spot (welcome screen, voice mode, avatars). Small
+ * sizes show a round head avatar; larger ones show the whole bird.
+ */
 export function RobotFace({ mood, size = 64, speaking = false }: { mood: RobotMood; size?: number; speaking?: boolean }) {
-  const eye = EYES[mood];
-  const antenna = mood === "thinking" ? "#ffb020" : mood === "listening" ? "#21c07a" : mood === "concerned" ? "#ff7a59" : "#ffb020";
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden="true" className="overflow-visible">
-      <defs>
-        <linearGradient id="rb-body" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#dfe6f7" />
-        </linearGradient>
-        <linearGradient id="rb-face" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#1d2a52" />
-          <stop offset="100%" stopColor="#0d1530" />
-        </linearGradient>
-      </defs>
-      {/* antenna */}
-      <line x1="50" y1="12" x2="50" y2="24" stroke="#9aa8c7" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="50" cy="10" r="5" fill={antenna}>
-        {mood === "thinking" && <animate attributeName="opacity" values="1;0.3;1" dur="0.9s" repeatCount="indefinite" />}
-      </circle>
-      {/* head */}
-      <rect x="18" y="24" width="64" height="50" rx="20" fill="url(#rb-body)" stroke="#c9d3ea" strokeWidth="1.5" />
-      <rect x="26" y="32" width="48" height="32" rx="13" fill="url(#rb-face)" />
-      {/* ears */}
-      <rect x="11" y="40" width="8" height="18" rx="4" fill="#2f5bff" />
-      <rect x="81" y="40" width="8" height="18" rx="4" fill="#2f5bff" />
-      {/* eyes */}
-      <g transform={`translate(0 ${eye.dy})`}>
-        {mood === "happy" ? (
-          <>
-            <path d="M35 49 q5 -7 10 0" stroke="#7de3ff" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-            <path d="M55 49 q5 -7 10 0" stroke="#7de3ff" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-          </>
-        ) : (
-          <>
-            <ellipse cx="40" cy="47" rx="5" ry={eye.ry} fill="#7de3ff">
-              {mood !== "thinking" && <animate attributeName="ry" values={`${eye.ry};0.6;${eye.ry}`} dur="4s" keyTimes="0;0.04;0.08" repeatCount="indefinite" />}
-            </ellipse>
-            <ellipse cx="60" cy="47" rx="5" ry={eye.ry} fill="#7de3ff">
-              {mood !== "thinking" && <animate attributeName="ry" values={`${eye.ry};0.6;${eye.ry}`} dur="4s" keyTimes="0;0.04;0.08" repeatCount="indefinite" />}
-            </ellipse>
-          </>
-        )}
-        {mood === "concerned" && (
-          <>
-            <line x1="34" y1="39" x2="44" y2="41" stroke="#7de3ff" strokeWidth="2" strokeLinecap="round" />
-            <line x1="66" y1="39" x2="56" y2="41" stroke="#7de3ff" strokeWidth="2" strokeLinecap="round" />
-          </>
-        )}
-      </g>
-      {/* mouth: moves while talking */}
-      {speaking || mood === "talking" ? (
-        <rect x="44" y="55" width="12" height="4" rx="2" fill="#7de3ff">
-          <animate attributeName="height" values="2;6;3;7;2" dur="0.5s" repeatCount="indefinite" />
-          <animate attributeName="y" values="56;54;55.5;53.5;56" dur="0.5s" repeatCount="indefinite" />
-        </rect>
-      ) : mood === "happy" ? (
-        <path d="M43 56 q7 6 14 0" stroke="#7de3ff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      ) : mood === "concerned" ? (
-        <path d="M44 59 q6 -4 12 0" stroke="#7de3ff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      ) : (
-        <rect x="45" y="56" width="10" height="2.5" rx="1.25" fill="#7de3ff" opacity="0.8" />
-      )}
-      {/* body */}
-      <rect x="32" y="76" width="36" height="16" rx="8" fill="url(#rb-body)" stroke="#c9d3ea" strokeWidth="1.5" />
-      <circle cx="50" cy="84" r="3.5" fill={mood === "listening" ? "#21c07a" : "#2f5bff"} />
-    </svg>
-  );
+  const talking = speaking || mood === "talking";
+  if (size <= 60) return <EagleAvatar size={size} talking={talking} />;
+  return <Eagle width={size * 1.25} mode={MOOD_MODE[mood]} talking={talking} />;
+}
+
+type Phase = "here" | "leaving" | "away" | "returning";
+
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 }
 
 /**
- * The robot that floats around the chat. It never takes taps (pointer-events
- * off) and stays clear of the input bar.
+ * The eagle that soars beside the chat. When Motzo starts looking something up
+ * it says "Let me find this for you" and flies off; when the answer is ready it
+ * flies back in and says "Hey, I'm back!". It never takes taps and stays clear
+ * of the input bar.
  */
 export function FloatingRobot({
   bounds,
@@ -141,9 +89,32 @@ export function FloatingRobot({
   hidden?: boolean;
 }) {
   const { mood, target } = useRobot();
-  const [pos, setPos] = useState({ x: 0, y: 0, z: 1 });
   const [box, setBox] = useState<DOMRect | null>(null);
-  const px = size === "small" ? 44 : 60;
+  const [home, setHome] = useState({ x: 0, y: 0, z: 1 });
+  const [phase, setPhase] = useState<Phase>("here");
+  const [bubble, setBubble] = useState<string | null>(null);
+  const [offPos, setOffPos] = useState<{ x: number; y: number } | null>(null);
+  const [instant, setInstant] = useState(false);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const phaseRef = useRef<Phase>("here");
+  const wantBack = useRef(false);
+  const w = size === "small" ? 66 : 92;
+  const h = (w * 150) / 200;
+  const flies = motion !== "still" && !prefersReducedMotion();
+
+  const later = useCallback((ms: number, fn: () => void) => {
+    timers.current.push(setTimeout(fn, ms));
+  }, []);
+  const clearTimers = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  };
+  const go = (p: Phase) => {
+    phaseRef.current = p;
+    setPhase(p);
+  };
+
+  useEffect(() => () => clearTimers(), []);
 
   useEffect(() => {
     const el = bounds.current;
@@ -159,54 +130,125 @@ export function FloatingRobot({
     };
   }, [bounds]);
 
+  // Where the eagle soars when it's here: the right side of the chat.
   useEffect(() => {
     if (!box) return;
     const place = () => {
-      // The right-hand gutter of the chat, above the input bar.
-      const minX = box.right - px - 12;
-      const maxX = box.right - px - 4;
-      const minY = box.top + 70;
-      const maxY = box.bottom - 190 - px;
+      const maxX = box.right - w - 8;
+      const minX = Math.max(box.left + 8, maxX - (motion === "full" ? 40 : 12));
+      const minY = box.top + 64;
+      const maxY = Math.max(minY, box.bottom - 170 - h);
       if (target) {
-        const y = Math.min(Math.max(target.top + target.height / 2 - px / 2, minY), Math.max(minY, maxY));
-        setPos({ x: maxX, y, z: 1.08 });
+        const y = Math.min(Math.max(target.top + target.height / 2 - h / 2, minY), maxY);
+        setHome({ x: maxX, y, z: 1.06 });
         return;
       }
-      if (mood === "thinking" || mood === "talking" || mood === "listening") {
-        setPos({ x: maxX, y: Math.max(minY, maxY), z: 1.05 });
+      if (mood === "talking" || mood === "listening" || motion === "still") {
+        setHome({ x: maxX, y: mood === "idle" || motion === "still" ? minY : maxY, z: 1 });
         return;
       }
-      if (motion === "still") {
-        setPos({ x: maxX, y: minY, z: 1 });
-        return;
-      }
-      setPos({
+      setHome({
         x: minX + Math.random() * (maxX - minX),
-        y: minY + Math.random() * Math.max(0, maxY - minY),
-        z: motion === "full" ? 0.85 + Math.random() * 0.3 : 1,
+        y: minY + Math.random() * (maxY - minY),
+        z: motion === "full" ? 0.9 + Math.random() * 0.2 : 1,
       });
     };
     place();
     if (motion === "still" || target) return;
-    const t = setInterval(place, motion === "full" ? 5500 : 11000);
+    const t = setInterval(place, motion === "full" ? 6000 : 12000);
     return () => clearInterval(t);
-  }, [box, mood, target, motion, px]);
+  }, [box, mood, target, motion, w, h]);
+
+  // Fly away to search, and back with the answer.
+  useEffect(() => {
+    const searching = mood === "thinking";
+    const p = phaseRef.current;
+    if (searching && (p === "here" || p === "returning")) {
+      clearTimers();
+      wantBack.current = false;
+      go("here");
+      setOffPos(null);
+      setBubble("Let me find this for you");
+      if (!flies) return;
+      later(950, () => {
+        setBubble(null);
+        setInstant(false);
+        setOffPos({ x: window.innerWidth + 60, y: Math.max(-h - 20, (box?.top ?? 0) - 140) });
+        go("leaving");
+        later(1300, () => {
+          go("away");
+          if (wantBack.current) comeBack();
+        });
+      });
+      return;
+    }
+    if (!searching) {
+      if (p === "leaving") {
+        wantBack.current = true;
+        return;
+      }
+      if (p === "away") {
+        comeBack();
+        return;
+      }
+      if (p === "here" && bubble === "Let me find this for you") {
+        // Answer came before the eagle took off (or it doesn't fly).
+        clearTimers();
+        setBubble("Hey, I'm back!");
+        later(2200, () => setBubble(null));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mood]);
+
+  function comeBack() {
+    clearTimers();
+    wantBack.current = false;
+    // Jump off screen to the left without animating, then fly in.
+    setInstant(true);
+    setOffPos({ x: -w - 60, y: (box?.top ?? 0) + 20 });
+    go("returning");
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        setInstant(false);
+        setOffPos(null);
+        later(1100, () => setBubble("Hey, I'm back!"));
+        later(1650, () => go("here"));
+        later(3600, () => setBubble((b) => (b === "Hey, I'm back!" ? null : b)));
+      }),
+    );
+  }
 
   if (!box || hidden) return null;
-  const bob = motion === "still" ? "" : "animate-[bob_3.2s_ease-in-out_infinite]";
+
+  const pos = offPos ? { ...offPos, z: 1 } : home;
+  const travelling = phase === "leaving" || phase === "returning";
+  const wing: WingMode = travelling ? "fast" : bubble === "Let me find this for you" ? "hover" : MOOD_MODE[mood === "thinking" ? "idle" : mood];
+  const duration = phase === "leaving" ? 1.3 : phase === "returning" ? 1.6 : motion === "still" ? 0 : 2.2;
+  // Bank into the turn while travelling.
+  const tilt = phase === "leaving" ? -14 : phase === "returning" ? 6 : 0;
+
   return (
     <div
       aria-hidden="true"
       className="pointer-events-none fixed left-0 top-0 z-30"
       style={{
         transform: `translate(${pos.x}px, ${pos.y}px) scale(${pos.z})`,
-        transition: motion === "still" ? "none" : "transform 1.6s cubic-bezier(0.45, 0.05, 0.25, 1)",
-        filter: "drop-shadow(0 8px 14px rgba(20,40,120,0.25))",
+        transition: instant || duration === 0 ? "none" : `transform ${duration}s cubic-bezier(0.45, 0.05, 0.25, 1)`,
+        filter: "drop-shadow(0 10px 12px rgba(20,30,60,0.22))",
       }}
     >
-      <style>{`@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}`}</style>
-      <div className={bob}>
-        <RobotFace mood={mood} size={px} />
+      {bubble && (
+        <div
+          key={bubble}
+          className="eagle-bubble absolute bottom-full right-1 mb-1 w-max max-w-[180px] rounded-2xl rounded-br-sm bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-lg ring-1 ring-line"
+          role="status"
+        >
+          {bubble}
+        </div>
+      )}
+      <div style={{ transform: `rotate(${tilt}deg)`, transition: "transform 0.5s ease" }}>
+        <Eagle width={w} mode={wing} talking={mood === "talking"} />
       </div>
     </div>
   );

@@ -68,7 +68,7 @@ function playBlob(blob: Blob): Promise<boolean> {
   });
 }
 
-export async function speak(text: string, useCloudVoice: boolean): Promise<void> {
+export async function speak(text: string, useCloudVoice: boolean, lang = "en-US"): Promise<void> {
   stopSpeaking();
   const clean = cleanForSpeech(text);
   if (!clean) return;
@@ -92,8 +92,13 @@ export async function speak(text: string, useCloudVoice: boolean): Promise<void>
   await new Promise<void>((resolve) => {
     const u = new SpeechSynthesisUtterance(clean);
     u.rate = 1.03;
+    u.lang = lang;
     const voices = speechSynthesis.getVoices();
-    const preferred = voices.find((v) => /en-US/i.test(v.lang) && /Samantha|Google US English|Aria|Jenny/i.test(v.name)) ?? voices.find((v) => /^en/i.test(v.lang));
+    const base = lang.split("-")[0].toLowerCase();
+    const preferred =
+      (base === "en" ? voices.find((v) => v.lang.toLowerCase() === lang.toLowerCase() && /Samantha|Google US English|Aria|Jenny|Daniel/i.test(v.name)) : undefined) ??
+      voices.find((v) => v.lang.toLowerCase() === lang.toLowerCase()) ??
+      voices.find((v) => v.lang.toLowerCase().startsWith(base));
     if (preferred) u.voice = preferred;
     u.onend = () => resolve();
     u.onerror = () => resolve();
@@ -128,13 +133,13 @@ export function canListen(): boolean {
   return Boolean(w.SpeechRecognition || w.webkitSpeechRecognition);
 }
 
-export function makeRecognizer(): Recognizer | null {
+export function makeRecognizer(lang?: string): Recognizer | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as Record<string, new () => Recognizer>;
   const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
   if (!Ctor) return null;
   const r = new Ctor();
-  r.lang = navigator.language || "en-US";
+  r.lang = lang || navigator.language || "en-US";
   r.interimResults = true;
   r.continuous = false;
   return r;

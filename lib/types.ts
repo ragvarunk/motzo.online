@@ -111,9 +111,20 @@ export type CardData =
   | { kind: "reminder"; milesSince: number; interval: number }
   | { kind: "quote"; requestId: string; quoteId: string };
 
+/** One conversation in the sidebar. A vehicle can have many. */
+export interface ChatThread {
+  id: string;
+  vehicleId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Message {
   id: string;
   vehicleId: string;
+  /** The conversation this message belongs to (filled in by the store). */
+  chatId?: string;
   author: Author;
   text: string;
   /** ISO timestamp, the exact moment the message was sent. Never edited. */
@@ -242,6 +253,8 @@ export interface Settings {
   robotMotion: "full" | "calm" | "still";
   robotSize: "small" | "normal";
   countMiles: boolean;
+  /** Language Motzo talks in (BCP 47 code such as "en-US", "es-ES", "hi-IN"). */
+  language: string;
 }
 
 export interface MotzoState {
@@ -252,6 +265,9 @@ export interface MotzoState {
   activeVehicleId: string | null;
   insurance: InsurancePolicy[];
   messages: Message[];
+  chats: ChatThread[];
+  /** The open conversation; null means a fresh, empty chat. */
+  activeChatId: string | null;
   quoteRequests: QuoteRequest[];
   jobs: Job[];
   sharing: SharingRecord[];

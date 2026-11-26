@@ -9,7 +9,9 @@ import { useEngine } from "./ChatEngine";
 import { Composer } from "./Composer";
 import { GaragePanel, SettingsPanel } from "./Garage";
 import { NewQuotePanel, QuotesPanel } from "./Quotes";
-import { FloatingRobot, RobotFace } from "./Robot";
+import { HelpPanel, LanguagePanel, LearnPanel, ProfilePanel, UsagePanel } from "./Profile";
+import { FloatingRobot } from "./Robot";
+import { Sidebar } from "./Sidebar";
 import { ShopDetailsPanel, ShopsPanel } from "./Shops";
 import { Icon, Sheet, useMinWidth, useUi, type Panel } from "./ui";
 import { VehicleForm } from "./VehicleForm";
@@ -17,8 +19,9 @@ import { VoiceMode } from "./VoiceMode";
 
 /** The main screen: chat in the middle, panels beside it on wide screens or as sheets on phones. */
 export function Main() {
-  const { state, activeVehicle, update } = useMotzo();
+  const { state, activeVehicle, update, activeChat, newChat } = useMotzo();
   const ui = useUi();
+  const [drawer, setDrawer] = useState(false);
   const wide = useMinWidth(1024);
   const chatRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -46,41 +49,28 @@ export function Main() {
 
   return (
     <div className="flex h-dvh">
-      {/* Left rail on wide screens */}
-      <nav className="hidden w-64 shrink-0 flex-col border-r border-line bg-surface p-4 lg:flex">
-        <div className="mb-6 flex items-center gap-2">
-          <RobotFace mood="idle" size={36} />
-          <span className="text-xl font-extrabold tracking-tight">Motzo</span>
-        </div>
-        <p className="label">Vehicles</p>
-        <div className="space-y-1">
-          {state.vehicles.map((v) => (
-            <button key={v.id} onClick={() => update((s) => ({ ...s, activeVehicleId: v.id }))} className={cls("w-full truncate rounded-xl px-3 py-2 text-left text-sm", v.id === activeVehicle?.id ? "bg-accent-soft font-semibold text-accent" : "hover:bg-surface-2")}>
-              {vehicleName(v)}
-            </button>
-          ))}
-          <button onClick={() => ui.open({ type: "vehicle" })} className="flex w-full items-center gap-1.5 rounded-xl px-3 py-2 text-sm text-ink-2 hover:bg-surface-2">
-            <Icon name="plus" className="h-4 w-4" /> Add vehicle
-          </button>
-        </div>
-        <div className="mt-6 space-y-1">
-          <NavItem icon="map" label="Shops near me" onClick={() => ui.open({ type: "shops" })} />
-          <NavItem icon="quote" label="Quotes" badge={openCount} onClick={() => ui.open({ type: "quotes" })} />
-          <NavItem icon="garage" label="My garage" onClick={() => ui.open({ type: "garage" })} />
-          <NavItem icon="settings" label="Settings" onClick={() => ui.open({ type: "settings" })} />
-        </div>
-        <p className="mt-auto text-xs text-ink-3">Your data stays on this device. Shops see your details only after you accept a quote.</p>
+      {/* Sidebar on wide screens */}
+      <nav className="hidden w-[272px] shrink-0 border-r border-line lg:flex">
+        <Sidebar />
       </nav>
+      {/* Sidebar as a drawer on phones and tablets */}
+      {drawer && !wide && (
+        <div className="fixed inset-0 z-[60] bg-black/40" onClick={() => setDrawer(false)}>
+          <nav onClick={(e) => e.stopPropagation()} className="drawer-in h-full w-[86%] max-w-[320px] shadow-2xl">
+            <Sidebar onNavigate={() => setDrawer(false)} onClose={() => setDrawer(false)} />
+          </nav>
+        </div>
+      )}
 
       {/* Chat column */}
       <main ref={chatRef} className="relative flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-line bg-surface/95 px-3 py-2 pt-[max(env(safe-area-inset-top),8px)] backdrop-blur">
-          <div className="lg:hidden">
-            <RobotFace mood="idle" size={32} />
-          </div>
+        <header className="flex items-center gap-1 px-2 py-2 pt-[max(env(safe-area-inset-top),8px)] sm:px-4">
+          <button onClick={() => setDrawer(true)} className="grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2 lg:hidden" aria-label="Open menu">
+            <Icon name="menu" />
+          </button>
           <div className="relative min-w-0 flex-1">
-            <button className="flex max-w-full items-center gap-1 rounded-lg px-1.5 py-1 hover:bg-surface-2" onClick={() => setVehicleMenu((x) => !x)}>
-              <span className="truncate font-bold">{vehicleName(activeVehicle)}</span>
+            <button className="flex max-w-full items-center gap-1 rounded-lg px-2 py-1 hover:bg-surface-2" onClick={() => setVehicleMenu((x) => !x)}>
+              <span className="truncate font-semibold">{vehicleName(activeVehicle)}</span>
               <Icon name="back" className="h-4 w-4 shrink-0 -rotate-90 text-ink-3" />
             </button>
             {vehicleMenu && (
@@ -89,7 +79,7 @@ export function Main() {
                   <button
                     key={v.id}
                     onClick={() => {
-                      update((s) => ({ ...s, activeVehicleId: v.id }));
+                      update((s) => ({ ...s, activeVehicleId: v.id, activeChatId: s.activeVehicleId === v.id ? s.activeChatId : null }));
                       setVehicleMenu(false);
                     }}
                     className={cls("block w-full truncate px-4 py-3 text-left text-sm hover:bg-surface-2", v.id === activeVehicle?.id && "font-semibold text-accent")}
@@ -102,15 +92,15 @@ export function Main() {
                 </button>
               </div>
             )}
-            <p className="px-1.5 text-xs text-ink-3">
-              {[activeVehicle?.plate, activeVehicle?.mileage && `${activeVehicle.mileage.toLocaleString()} mi`].filter(Boolean).join(" · ") || "Tap to switch vehicles"}
+            <p className="truncate px-2 text-xs text-ink-3">
+              {activeChat?.title ||
+                [activeVehicle?.plate, activeVehicle?.mileage && `${activeVehicle.mileage.toLocaleString()} mi`].filter(Boolean).join(" · ") ||
+                "New chat"}
             </p>
           </div>
+          <HeaderBtn icon="compose" label="New chat" onClick={newChat} />
           <div className="flex items-center lg:hidden">
-            <HeaderBtn icon="map" label="Shops" onClick={() => ui.open({ type: "shops" })} />
             <HeaderBtn icon="quote" label="Quotes" badge={openCount} onClick={() => ui.open({ type: "quotes" })} />
-            <HeaderBtn icon="garage" label="Garage" onClick={() => ui.open({ type: "garage" })} />
-            <HeaderBtn icon="settings" label="Settings" onClick={() => ui.open({ type: "settings" })} />
           </div>
         </header>
         <SampleBanner />
@@ -118,7 +108,7 @@ export function Main() {
           <ChatList />
         </div>
         <Composer />
-        <FloatingRobot bounds={chatRef} motion={state.settings.robotMotion} size={state.settings.robotSize} hidden={ui.voiceOpen || !!ui.camera || (!wide && !!panel)} />
+        <FloatingRobot bounds={chatRef} motion={state.settings.robotMotion} size={state.settings.robotSize} hidden={ui.voiceOpen || !!ui.camera || (!wide && (!!panel || drawer))} />
       </main>
 
       {/* Panels */}
@@ -149,6 +139,16 @@ function renderPanel(p: Panel, close: () => void, back: () => void) {
       return <GaragePanel key={p.tab} tab={p.tab} onClose={close} />;
     case "settings":
       return <SettingsPanel onClose={close} />;
+    case "profile":
+      return <ProfilePanel onClose={close} />;
+    case "language":
+      return <LanguagePanel onClose={close} />;
+    case "usage":
+      return <UsagePanel onClose={close} />;
+    case "help":
+      return <HelpPanel onClose={close} />;
+    case "learn":
+      return <LearnPanel onClose={close} />;
     case "vehicle":
       return <VehiclePanel vehicleId={p.vehicleId} onClose={close} />;
   }
@@ -185,16 +185,6 @@ function SampleBanner() {
         <Icon name="close" className="h-4 w-4" />
       </button>
     </div>
-  );
-}
-
-function NavItem({ icon, label, onClick, badge }: { icon: string; label: string; onClick: () => void; badge?: number }) {
-  return (
-    <button onClick={onClick} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-surface-2">
-      <Icon name={icon} className="h-5 w-5 text-ink-2" />
-      <span className="flex-1 text-left">{label}</span>
-      {badge ? <span className="rounded-full bg-accent px-1.5 text-xs font-bold text-accent-ink">{badge}</span> : null}
-    </button>
   );
 }
 

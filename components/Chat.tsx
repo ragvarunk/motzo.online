@@ -14,15 +14,15 @@ const REACTIONS = ["👍", "❤️", "😊", "😮", "🙏", "👎"];
 
 /** The conversation for the active vehicle. Every message shows its exact time. */
 export function ChatList() {
-  const { state, activeVehicle } = useMotzo();
+  const { state, activeChat } = useMotzo();
   const { busy } = useEngine();
   const robot = useRobot();
   const endRef = useRef<HTMLDivElement>(null);
   const lastCardRef = useRef<HTMLDivElement>(null);
 
   const messages = useMemo(
-    () => state.messages.filter((m) => m.vehicleId === activeVehicle?.id),
-    [state.messages, activeVehicle?.id],
+    () => (activeChat ? state.messages.filter((m) => m.chatId === activeChat.id) : []),
+    [state.messages, activeChat],
   );
 
   useEffect(() => {
@@ -35,10 +35,12 @@ export function ChatList() {
   let lastDay = "";
   return (
     <div className="mx-auto w-full max-w-3xl px-3 pb-6 pt-3 sm:px-5">
-      <p className="mb-3 text-center text-xs text-ink-3">
-        Every message is saved on this device with its exact date and time ({timeZoneName()}). Tap a time to see it in full.
-      </p>
-      {messages.length === 0 && <EmptyChat />}
+      {messages.length === 0 && !busy && <EmptyChat />}
+      {messages.length > 0 && (
+        <p className="mb-3 text-center text-xs text-ink-3">
+          Every message is saved on this device with its exact date and time ({timeZoneName()}). Tap a time to see it in full.
+        </p>
+      )}
       {messages.map((m, i) => {
         const day = new Date(m.at).toDateString();
         const showDay = day !== lastDay;
@@ -65,7 +67,7 @@ export function ChatList() {
             <span className="dot h-1.5 w-1.5 rounded-full bg-ink-3 [animation-delay:0.15s]" />
             <span className="dot h-1.5 w-1.5 rounded-full bg-ink-3 [animation-delay:0.3s]" />
           </span>
-          Motzo is looking…
+          Motzo is out looking…
         </div>
       )}
       <div ref={endRef} className="h-2" />
@@ -75,23 +77,30 @@ export function ChatList() {
 
 function EmptyChat() {
   const { send } = useEngine();
-  const { activeVehicle } = useMotzo();
-  const ideas = [
-    "My windshield has a crack, what will it cost?",
-    "There's a dent on my rear bumper",
-    "When is my next oil change due?",
-    "My check engine light is on",
+  const { state, activeVehicle } = useMotzo();
+  const first = state.owner.name.trim().split(/\s+/)[0];
+  const hour = new Date().getHours();
+  const hello = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const ideas: [string, string][] = [
+    ["camera", "My windshield has a crack, what will it cost?"],
+    ["car", "There's a dent on my rear bumper"],
+    ["clock", "When is my next oil change due?"],
+    ["bolt", "My check engine light is on"],
   ];
   return (
-    <div className="rise my-6 flex flex-col items-center text-center">
-      <RobotFace mood="happy" size={88} />
-      <h2 className="mt-3 text-xl font-bold">Hi, I&apos;m Motzo</h2>
-      <p className="mt-1 max-w-sm text-sm text-ink-2">
+    <div className="rise flex min-h-[52dvh] flex-col items-center justify-center text-center">
+      <RobotFace mood="happy" size={96} />
+      <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+        {hello}
+        {first ? `, ${first}` : ""}
+      </h2>
+      <p className="mt-2 max-w-md text-sm text-ink-2">
         Ask me anything about your {activeVehicle?.model ?? "vehicle"}. Send a photo of damage and I&apos;ll tell you what it is, what it should cost and who can fix it.
       </p>
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {ideas.map((t) => (
-          <button key={t} className="rounded-full border border-line bg-surface px-3 py-2 text-sm hover:border-accent" onClick={() => send({ text: t })}>
+      <div className="mt-6 grid w-full max-w-xl gap-2 sm:grid-cols-2">
+        {ideas.map(([icon, t]) => (
+          <button key={t} className="flex items-center gap-2.5 rounded-2xl border border-line bg-surface px-3.5 py-3 text-left text-sm hover:border-ink-3/60" onClick={() => send({ text: t })}>
+            <Icon name={icon} className="h-4 w-4 shrink-0 text-ink-3" />
             {t}
           </button>
         ))}

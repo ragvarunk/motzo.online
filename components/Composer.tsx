@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useMotzo } from "@/lib/store";
 import { canListen, makeRecognizer, readResults, stopSpeaking, type Recognizer } from "@/lib/speech";
 import { prettySize } from "@/lib/media";
 import { cls } from "@/lib/util";
@@ -11,6 +12,7 @@ import { Icon, useUi } from "./ui";
 /** The input bar: type, attach, camera, voice note, voice mode, send. */
 export function Composer() {
   const { send, busy } = useEngine();
+  const { state } = useMotzo();
   const ui = useUi();
   const robot = useRobot();
   const [text, setText] = useState("");
@@ -88,7 +90,7 @@ export function Composer() {
       setRec({ started: Date.now(), interim: "" });
       robot.setMood("listening");
       if (canListen()) {
-        const r = makeRecognizer();
+        const r = makeRecognizer(state.settings.language);
         if (r) {
           r.continuous = true;
           r.onresult = (e) => {
@@ -120,7 +122,7 @@ export function Composer() {
   void tick;
 
   return (
-    <div className="border-t border-line bg-surface/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 backdrop-blur sm:px-4">
+    <div className="px-2 pb-[max(env(safe-area-inset-bottom),10px)] pt-1 sm:px-4">
       <div className="mx-auto max-w-3xl">
         {files.length > 0 && (
           <div className="scroll-thin mb-2 flex gap-2 overflow-x-auto pb-1">
@@ -150,24 +152,7 @@ export function Composer() {
             </button>
           </div>
         ) : (
-          <div className="flex items-end gap-1.5">
-            <div className="relative">
-              <button className={cls("grid h-11 w-11 place-items-center rounded-full hover:bg-surface-2", menu && "bg-surface-2")} onClick={() => setMenu((m) => !m)} aria-label="Attach">
-                <Icon name="plus" />
-              </button>
-              {menu && (
-                <div className="pop-in absolute bottom-14 left-0 z-30 w-60 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
-                  <MenuItem icon="camera" label="Camera" sub="Photo, video or lens" onClick={() => { setMenu(false); ui.openCamera({ mode: "photo" }); }} />
-                  <MenuItem icon="video" label="Photos & videos" sub="From your library" onClick={() => pickMedia.current?.click()} />
-                  <MenuItem icon="doc" label="Document" sub="Insurance card, invoice, PDF" onClick={() => pickDoc.current?.click()} />
-                  <MenuItem icon="mic" label="Audio file" sub="A recording of a noise" onClick={() => pickAudio.current?.click()} />
-                  <MenuItem icon="plus" label="Any file" onClick={() => pickAny.current?.click()} />
-                </div>
-              )}
-            </div>
-            <button className="grid h-11 w-11 place-items-center rounded-full hover:bg-surface-2" onClick={() => ui.openCamera({ mode: "photo" })} aria-label="Open camera">
-              <Icon name="camera" />
-            </button>
+          <div className="rounded-[26px] border border-line bg-surface p-2 shadow-[var(--shadow)] focus-within:border-ink-3/50">
             <textarea
               ref={area}
               rows={1}
@@ -179,26 +164,47 @@ export function Composer() {
                   submit();
                 }
               }}
-              placeholder="Message Motzo"
-              className="field max-h-40 min-h-11 flex-1 resize-none rounded-3xl py-2.5 leading-snug"
+              placeholder="How can I help with your vehicle?"
+              className="block max-h-40 min-h-11 w-full resize-none bg-transparent px-2.5 py-2 leading-snug outline-none placeholder:text-ink-3"
               aria-label="Message"
             />
-            {text.trim() || files.length ? (
-              <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent text-accent-ink disabled:opacity-50" onClick={submit} disabled={busy} aria-label="Send">
-                <Icon name="send" />
+            <div className="flex items-center gap-1">
+              <div className="relative">
+                <button className={cls("grid h-9 w-9 place-items-center rounded-full border border-line hover:bg-surface-2", menu && "bg-surface-2")} onClick={() => setMenu((m) => !m)} aria-label="Attach">
+                  <Icon name="plus" className="h-[18px] w-[18px]" />
+                </button>
+                {menu && (
+                  <div className="pop-in absolute bottom-12 left-0 z-30 w-60 overflow-hidden rounded-2xl border border-line bg-surface shadow-xl">
+                    <MenuItem icon="camera" label="Camera" sub="Photo, video or lens" onClick={() => { setMenu(false); ui.openCamera({ mode: "photo" }); }} />
+                    <MenuItem icon="video" label="Photos & videos" sub="From your library" onClick={() => pickMedia.current?.click()} />
+                    <MenuItem icon="doc" label="Document" sub="Insurance card, invoice, PDF" onClick={() => pickDoc.current?.click()} />
+                    <MenuItem icon="mic" label="Audio file" sub="A recording of a noise" onClick={() => pickAudio.current?.click()} />
+                    <MenuItem icon="plus" label="Any file" onClick={() => pickAny.current?.click()} />
+                  </div>
+                )}
+              </div>
+              <button className="grid h-9 w-9 place-items-center rounded-full border border-line hover:bg-surface-2" onClick={() => ui.openCamera({ mode: "photo" })} aria-label="Open camera">
+                <Icon name="camera" className="h-[18px] w-[18px]" />
               </button>
-            ) : (
-              <>
-                <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-surface-2" onClick={startVoiceNote} aria-label="Record a voice note">
-                  <Icon name="mic" />
+              <span className="flex-1" />
+              {text.trim() || files.length ? (
+                <button className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent text-accent-ink disabled:opacity-50" onClick={submit} disabled={busy} aria-label="Send">
+                  <Icon name="send" className="h-[18px] w-[18px]" />
                 </button>
-                <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent text-accent-ink" onClick={() => ui.setVoiceOpen(true)} aria-label="Talk with Motzo (voice mode)">
-                  <Icon name="wave" />
-                </button>
-              </>
-            )}
+              ) : (
+                <>
+                  <button className="grid h-9 w-9 shrink-0 place-items-center rounded-full hover:bg-surface-2" onClick={startVoiceNote} aria-label="Record a voice note">
+                    <Icon name="mic" className="h-[18px] w-[18px]" />
+                  </button>
+                  <button className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent text-accent-ink" onClick={() => ui.setVoiceOpen(true)} aria-label="Talk with Motzo (voice mode)">
+                    <Icon name="wave" className="h-[18px] w-[18px]" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
+        <p className="mt-1.5 text-center text-[11px] text-ink-3">Motzo gives estimates. Check safety repairs with a technician.</p>
         <input ref={pickMedia} type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
         <input ref={pickDoc} type="file" accept="application/pdf,image/*,text/plain,.doc,.docx" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
         <input ref={pickAudio} type="file" accept="audio/*" multiple hidden onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }} />
