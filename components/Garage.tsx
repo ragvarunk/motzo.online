@@ -434,7 +434,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[var(--accent)]" checked={s.speakAnswers} onChange={(e) => set({ speakAnswers: e.target.checked })} />
           <span>
             <span className="font-semibold">Read Motzo&apos;s answers out loud</span>
-            <span className="block text-ink-3">{services.voice ? "Uses Motzo's own voice." : "Uses your device's voice (connect the voice server for Motzo's own voice)."}</span>
+            <span className="block text-ink-3">{services.voice ? "Uses Motzo's own voice." : "Uses your device's voice (add the voice key for Motzo's own voice)."}</span>
           </span>
         </label>
         <div>

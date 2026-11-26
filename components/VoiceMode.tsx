@@ -149,7 +149,7 @@ export function VoiceMode() {
         )}
         {!supported && !services.voice && (
           <p className="max-w-sm text-sm text-white/70">
-            Listening isn&apos;t available in this browser. Chrome, Edge and Safari support it, or connect Motzo's voice server so it can transcribe recordings.
+            Listening isn&apos;t available in this browser. Chrome, Edge and Safari support it, or connect Motzo's voice so it can transcribe recordings.
           </p>
         )}
       </div>

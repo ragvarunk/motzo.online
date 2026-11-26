@@ -2,7 +2,7 @@
 
 import { api } from "./api";
 
-// Speaking and listening. Uses the self-hosted voice server when set, otherwise the
+// Speaking and listening. Uses Motzo's own voice (ElevenLabs, or a self-hosted voice server) when set, otherwise the
 // voice built into the phone or computer. Listening uses the browser's speech
 // recognition (Chrome, Edge, Safari).
 

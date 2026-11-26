@@ -1,9 +1,21 @@
 import "server-only";
 
-// Motzo's own voice runs on a self-hosted open-source voice server that
-// speaks the OpenAI audio API (for example Speaches, which serves Kokoro for
-// speech and faster-whisper for transcripts). Nothing here is tied to one
-// vendor: point MOTZO_VOICE_URL at any compatible server.
+/** ElevenLabs voice, used first whenever ELEVENLABS_API_KEY is set. */
+export function elevenLabs() {
+  const key = process.env.ELEVENLABS_API_KEY?.trim();
+  if (!key) return null;
+  return {
+    key,
+    voiceId: process.env.ELEVENLABS_VOICE_ID?.trim() || "JBFqnCBsd6RMkjVDRZzb",
+    // Flash: ElevenLabs' fastest, lowest-cost voice model.
+    ttsModel: process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_flash_v2_5",
+    sttModel: process.env.ELEVENLABS_STT_MODEL_ID?.trim() || "scribe_v2",
+  };
+}
+
+// Later option, used only when ElevenLabs isn't set: a self-hosted open-source
+// voice server with the OpenAI audio API (for example Speaches, which serves
+// Kokoro for speech and faster-whisper for transcripts; see voice-server/).
 
 export function voiceServer() {
   const url = process.env.MOTZO_VOICE_URL?.trim().replace(/\/+$/, "");

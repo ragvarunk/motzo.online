@@ -10,7 +10,7 @@ export async function GET() {
     model: hasAnthropic() ? MODEL : null,
     maps: Boolean(process.env.GOOGLE_MAPS_API_KEY),
     mapEmbed: Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY),
-    voice: Boolean(process.env.MOTZO_VOICE_URL),
+    voice: Boolean(process.env.ELEVENLABS_API_KEY || process.env.MOTZO_VOICE_URL),
     accessCode: Boolean(process.env.MOTZO_ACCESS_CODE),
   });
 }
