@@ -177,7 +177,7 @@ export function FloatingRobot({
         go("leaving");
         later(1300, () => {
           go("away");
-          if (wantBack.current) comeBack();
+          if (wantBack.current) later(500, comeBack);
         });
       });
       return;
@@ -192,7 +192,11 @@ export function FloatingRobot({
         return;
       }
       if (p === "here" && bubble === "Let me find this for you") {
-        // Answer came before the eagle took off (or it doesn't fly).
+        if (flies) {
+          // Answer came before the eagle took off: it still makes the trip.
+          wantBack.current = true;
+          return;
+        }
         clearTimers();
         setBubble("Hey, I'm back!");
         later(2200, () => setBubble(null));
@@ -241,7 +245,8 @@ export function FloatingRobot({
       {bubble && (
         <div
           key={bubble}
-          className="eagle-bubble absolute bottom-full right-1 mb-1 w-max max-w-[180px] rounded-2xl rounded-br-sm bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-lg ring-1 ring-line"
+          style={{ top: h * 0.22 }}
+          className="eagle-bubble absolute right-1 w-max max-w-[180px] -translate-y-full rounded-2xl rounded-br-sm bg-surface px-3 py-1.5 text-xs font-semibold text-ink shadow-lg ring-1 ring-line"
           role="status"
         >
           {bubble}

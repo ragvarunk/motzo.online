@@ -22,6 +22,7 @@ export function Main() {
   const { state, activeVehicle, update, activeChat, newChat } = useMotzo();
   const ui = useUi();
   const [drawer, setDrawer] = useState(false);
+  const { busy } = useEngine();
   const wide = useMinWidth(1024);
   const chatRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -108,7 +109,7 @@ export function Main() {
           <ChatList />
         </div>
         <Composer />
-        <FloatingRobot bounds={chatRef} motion={state.settings.robotMotion} size={state.settings.robotSize} hidden={ui.voiceOpen || !!ui.camera || (!wide && (!!panel || drawer))} />
+        <FloatingRobot bounds={chatRef} motion={state.settings.robotMotion} size={state.settings.robotSize} hidden={ui.voiceOpen || !!ui.camera || (!wide && (!!panel || drawer)) || (!activeChat && !busy)} />
       </main>
 
       {/* Panels */}
