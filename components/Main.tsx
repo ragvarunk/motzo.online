@@ -113,7 +113,7 @@ export function Main() {
       </main>
 
       {/* Panels */}
-      {panel && wide && <aside className="sheet-up w-[420px] shrink-0 overflow-hidden border-l border-line bg-surface xl:w-[480px]">{panel}</aside>}
+      {panel && wide && <aside className="sheet-up relative z-40 w-[420px] shrink-0 overflow-hidden border-l border-line bg-surface xl:w-[480px]">{panel}</aside>}
       {panel && !wide && (
         <Sheet onClose={ui.close} wide>
           <div className="flex h-[90dvh] flex-col">{panel}</div>

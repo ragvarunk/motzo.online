@@ -130,6 +130,18 @@ export function FloatingRobot({
     };
   }, [bounds]);
 
+  // When the chat area changes size (a side panel opens or closes), jump to the
+  // new spot instead of gliding across the panel.
+  const lastRight = useRef<number | null>(null);
+  useEffect(() => {
+    if (!box) return;
+    const prev = lastRight.current;
+    lastRight.current = box.right;
+    if (prev === null || Math.abs(prev - box.right) < 4 || phaseRef.current !== "here") return;
+    setInstant(true);
+    requestAnimationFrame(() => requestAnimationFrame(() => setInstant(false)));
+  }, [box]);
+
   // Where the eagle soars when it's here: the right side of the chat.
   useEffect(() => {
     if (!box) return;
@@ -216,11 +228,18 @@ export function FloatingRobot({
       requestAnimationFrame(() => {
         setInstant(false);
         setOffPos(null);
-        later(1100, () => setBubble("Hey, I'm back!"));
-        later(1650, () => go("here"));
-        later(3600, () => setBubble((b) => (b === "Hey, I'm back!" ? null : b)));
+        // Say "Hey, I'm back!" only once the eagle has landed in view. The
+        // timer is a fallback for when the browser skips the transition event.
+        later(2000, arrive);
       }),
     );
+  }
+
+  function arrive() {
+    if (phaseRef.current !== "returning") return;
+    go("here");
+    setBubble("Hey, I'm back!");
+    later(2500, () => setBubble((b) => (b === "Hey, I'm back!" ? null : b)));
   }
 
   if (!box || hidden) return null;
@@ -236,6 +255,9 @@ export function FloatingRobot({
     <div
       aria-hidden="true"
       className="pointer-events-none fixed left-0 top-0 z-30"
+      onTransitionEnd={(e) => {
+        if (e.target === e.currentTarget && e.propertyName === "transform" && !offPos) arrive();
+      }}
       style={{
         transform: `translate(${pos.x}px, ${pos.y}px) scale(${pos.z})`,
         transition: instant || duration === 0 ? "none" : `transform ${duration}s cubic-bezier(0.45, 0.05, 0.25, 1)`,

@@ -164,7 +164,27 @@ export function demoReply(input: {
     return r;
   }
 
-  if (/noise|sound|light|engine|brake|check engine|warning/.test(t)) {
+  if (/brake|rotor|caliper|\bpads?\b/.test(t)) {
+    r.mood = "concerned";
+    r.reply =
+      "Sample answer (no AI key set yet): a brake job usually means new pads, and often new rotors too. Most repair shops can do it the same day. If the pedal feels soft or you hear grinding, get it checked soon.";
+    r.estimate = {
+      part: "Brake pads and rotors",
+      work: "Front brake pads and rotors",
+      cost_low: 250,
+      cost_high: 600,
+      basis: "Sample range for one axle on a typical sedan; pads only is often $150 to $300.",
+      shop_type: "repair",
+      today: "likely",
+      urgency: "drive_carefully",
+      insurance_note: "Brake wear is normal upkeep, so insurance usually doesn't cover it.",
+    };
+    r.shop_search = { shop_type: "repair", search_text: "brake repair" };
+    r.offer_quotes = true;
+    return r;
+  }
+
+  if (/noise|sound|light|engine|check engine|warning/.test(t)) {
     r.mood = "concerned";
     r.reply =
       "Sample answer (no AI key set yet): that could have a few causes. Send a photo of the dashboard light or a short video with the noise, and I'll narrow it down. A repair shop should check it.";
